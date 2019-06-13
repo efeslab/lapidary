@@ -1,0 +1,421 @@
+config_sets:
+  default:
+    - cooldown_eagerloadsprotection
+    - cooldown_maximumprotection
+    - cooldown_branchprotection_liberal
+    - cooldown_branchprotection_conservative
+    - inorder
+    - o3
+    - cooldown_empty
+    - invisispec_unsafebaseline
+    - invisispec_spectresafeinvisiblespec
+    - invisispec_futuristicsafeinvisiblespec
+  prevent_ssb:
+    - cooldown_branchprotection_liberal
+    - cooldown_branchprotection_conservative
+    - cooldown_branchprotection_liberal_prevent_ssb
+    - cooldown_branchprotection_conservative_prevent_ssb
+  default_plus_ssb:
+    - cooldown_eagerloadsprotection
+    - cooldown_maximumprotection
+    - inorder
+    - o3
+    - cooldown_empty
+    - invisispec_spectresafeinvisiblespec
+    - invisispec_futuristicsafeinvisiblespec
+    - cooldown_branchprotection_liberal
+    - cooldown_branchprotection_conservative
+    - cooldown_branchprotection_liberal_prevent_ssb
+    - cooldown_branchprotection_conservative_prevent_ssb
+  default_no_invisispec_basline:
+    - cooldown_eagerloadsprotection
+    - cooldown_maximumprotection
+    - cooldown_branchprotection_liberal
+    - cooldown_branchprotection_conservative
+    - inorder
+    - o3
+    - cooldown_empty
+    - invisispec_spectresafeinvisiblespec
+    - invisispec_futuristicsafeinvisiblespec
+  default_minus_inorder:
+    - cooldown_eagerloadsprotection
+    - cooldown_maximumprotection
+    - cooldown_branchprotection_liberal
+    - cooldown_branchprotection_conservative
+    - cooldown_branchprotection_liberal_prevent_ssb
+    - cooldown_branchprotection_conservative_prevent_ssb
+    - o3
+    - cooldown_empty
+  baselines:
+    - inorder
+    - o3
+    - cooldown_empty
+  sensitivity_test:
+    - cooldown_branchprotection_liberal_delayedwakeup_0
+    - cooldown_branchprotection_liberal_delayedwakeup_1
+    - cooldown_branchprotection_liberal_delayedwakeup_2
+    - cooldown_maximumprotection_delayedwakeup_0
+    - cooldown_maximumprotection_delayedwakeup_1
+    - cooldown_maximumprotection_delayedwakeup_2
+
+schemes:
+  simple_cpi:
+    dimensions: [1, 1]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 1],
+                type: single_stat,
+                stat: cpi,
+                options: {
+                  cutoff: 10.0,
+                  label: 'Cycles per Instruction',
+                  exclude_tick_labels: False,
+                  error_bars: True,
+                }
+              }
+           ]
+    print_size: [3.5, 7.0]
+    file_name: cpi_graph.pdf
+
+  baseline_cpi:
+    dimensions: [1, 1]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 1],
+                type: single_stat,
+                stat: cpi,
+                config_set: baselines,
+                options: {
+                  cutoff: 10.0,
+                  label: 'Cycles per Instruction',
+                  exclude_tick_labels: False,
+                  error_bars: True,
+                }
+              }
+           ]
+    print_size: [3.5, 7.0]
+    file_name: cpi_graph.pdf
+
+  cpi_average:
+    dimensions: [1, 1]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 1],
+                type: single_stat,
+                stat: cpi,
+                options: {
+                  cutoff: 2.5,
+                  label: 'Cycles per Instruction',
+                  exclude_tick_labels: False,
+                  error_bars: False,
+                  average: True,
+                  label_bars: True,
+                  add_numbers: True,
+                  precision: 2,
+                }
+              }
+           ]
+    print_size: [7.0, 2.0]
+    file_name: cpi_average_graph.pdf
+
+  mlp:
+    dimensions: [1, 1]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 1],
+                type: single_stat,
+                stat: MLP,
+                config_set: default_minus_inorder,
+                options: {
+                  cutoff: 8.0,
+                  label: 'Memory-Level Parallelism',
+                  exclude_tick_labels: False,
+                  add_numbers: True,
+                  error_bars: False,
+                }
+              }
+           ]
+    print_size: [3.5, 7.0]
+    file_name: mlp_graph.pdf
+
+  latency_to_issue:
+    dimensions: [1, 1]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 1],
+                type: single_stat,
+                stat: avgLatencyToIssue,
+                options: {
+                  cutoff: 8.0,
+                  label: Latency to Issue,
+                  exclude_tick_labels: False,
+                  error_bars: False,
+                  average: True,
+                }
+              }
+           ]
+    print_size: [3.5, 2.0]
+    file_name: latency_to_issue_graph.pdf
+
+  cpi_breakdown:
+    dimensions: [1, 1]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 1],
+                type: cpi_breakdown,
+              }
+           ]
+    print_size: [3.5, 7.0]
+    file_name: cpi_breakdown_graph.png
+
+  cpi_breakdown_average:
+    dimensions: [1, 1]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 1],
+                type: cpi_breakdown,
+                options: {
+                  average: True.
+                }
+              }
+           ]
+    print_size: [3.5, 2.0]
+    file_name: cpi_breakdown_graph.png
+
+  miniplots:
+    dimensions: [2, 2]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 1],
+                type: cpi_breakdown,
+                config_set: default_minus_inorder,
+                options: {
+                  average: True,
+                  label: 'a) Cycles Breakdown, Normalized to OoO',
+                  cutoff: 2.55,
+                  label_bars: True,
+                  config_legend: False,
+                  breakdown_legend: True,
+                  number_align: left,
+                  precision: 1,
+                  legend: {
+                    prop: {size: 5,},
+                    loc: upper right,
+                    ncol: 2,
+                    borderpad: 0,
+                    labelspacing: 0,
+                    columnspacing: 1,
+                    handletextpad: 0.75,
+                  }
+                },
+              },
+              {
+                pos: [1, 1],
+                size: [1, 1],
+                type: single_stat,
+                stat: cpi,
+                config_set: sensitivity_test,
+                options: {
+                  cutoff: 2.7,
+                  label: d) Impact of NDA Logic Latency on CPI,
+                  exclude_tick_labels: True,
+                  add_numbers: True,
+                  number_align: left,
+                  precision: 2,
+                  error_bars: False,
+                  average: True,
+                  label_bars: True,
+                }
+              },
+              {
+                pos: [0, 1],
+                size: [1, 1],
+                type: single_stat,
+                stat: MLP,
+                config_set: default_minus_inorder,
+                options: {
+                  cutoff: 2.1,
+                  label: b) Memory-Level Parallelism,
+                  exclude_tick_labels: True,
+                  error_bars: False,
+                  add_numbers: True,
+                  number_align: left,
+                  average: True,
+                  label_bars: True,
+                  precision: 2,
+                }
+              },
+              {
+                pos: [1, 0],
+                size: [1, 1],
+                type: single_stat,
+                stat: avgLatencyToIssue,
+                config_set: default_minus_inorder,
+                options: {
+                  cutoff: 60,
+                  label: c) Impact of NDA on Latency from Dispatch to Issue (Cycles),
+                  exclude_tick_labels: True,
+                  error_bars: False,
+                  add_numbers: True,
+                  number_align: left,
+                  average: True,
+                  label_bars: True,
+                }
+              },
+           ]
+    print_size: [7.0, 2.0]
+    file_name: miniplots.png
+
+  split_cpi:
+    dimensions: [12, 2]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [12, 1],
+                type: single_stat,
+                stat: cpi,
+                config_set: default_no_invisispec_basline,
+                options: {
+                  cutoff: 7.4,
+                  label: 'Cycles per Instruction',
+                  exclude_tick_labels: False,
+                  add_numbers: True,
+                  error_bars: True,
+                  legend: {
+                    prop: {size: 6,},
+                    loc: lower right,
+                    ncol: 1,
+                  },
+                },
+                benchmarks: ['500.perlbench_r',
+                             '502.gcc_r',
+                             '503.bwaves_r',
+                             '505.mcf_r',
+                             '507.cactuBSSN_r',
+                             '510.parest_r',
+                             '519.lbm_r',
+                             '520.omnetpp_r',
+                             '521.wrf_r',
+                             '523.xalancbmk_r',
+                             '525.x264_r',
+                             '508.namd_r',
+                            ]
+              },
+              {
+                pos: [0, 1],
+                size: [12, 1],
+                type: single_stat,
+                stat: cpi,
+                config_set: default_no_invisispec_basline,
+                options: {
+                  cutoff: 3.0,
+                  label: 'Cycles per Instruction',
+                  exclude_tick_labels: False,
+                  add_numbers: True,
+                  error_bars: True,
+                  per_tick_label: {
+                    'Average': {
+                      font: {weight: bold,},
+                      line_before: True
+                      },
+                  },
+                },
+                benchmarks: [
+                             '526.blender_r',
+                             '527.cam4_r',
+                             '531.deepsjeng_r',
+                             '538.imagick_r',
+                             '541.leela_r',
+                             '511.povray_r',
+                             '544.nab_r',
+                             '548.exchange2_r',
+                             '549.fotonik3d_r',
+                             '554.roms_r',
+                             '557.xz_r',
+                             'Average']
+              },
+           ]
+    print_size: [7.0, 7.0]
+    file_name: split_cpi_graph.pdf
+
+  split_cpi_ssb:
+    dimensions: [12, 2]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [12, 1],
+                type: single_stat,
+                stat: cpi,
+                config_set: default_plus_ssb,
+                options: {
+                  cutoff: 7.4,
+                  label: 'Cycles per Instruction',
+                  exclude_tick_labels: False,
+                  add_numbers: False,
+                  precision: 1,
+                  error_bars: True,
+                  legend: {
+                    prop: {size: 6,},
+                    loc: lower right,
+                    ncol: 1,
+                  },
+                },
+                benchmarks: ['500.perlbench_r',
+                             '502.gcc_r',
+                             '503.bwaves_r',
+                             '505.mcf_r',
+                             '507.cactuBSSN_r',
+                             '510.parest_r',
+                             '519.lbm_r',
+                             '520.omnetpp_r',
+                             '521.wrf_r',
+                             '523.xalancbmk_r',
+                             '525.x264_r',
+                             '508.namd_r',
+                            ]
+              },
+              {
+                pos: [0, 1],
+                size: [12, 1],
+                type: single_stat,
+                stat: cpi,
+                config_set: default_plus_ssb,
+                options: {
+                  cutoff: 3.0,
+                  label: 'Cycles per Instruction',
+                  exclude_tick_labels: False,
+                  add_numbers: False,
+                  error_bars: True,
+                  precision: 1,
+                  per_tick_label: {
+                    'Average': {
+                      font: {weight: bold,},
+                      line_before: True
+                      },
+                  },
+                },
+                benchmarks: [
+                             '526.blender_r',
+                             '527.cam4_r',
+                             '531.deepsjeng_r',
+                             '538.imagick_r',
+                             '541.leela_r',
+                             '511.povray_r',
+                             '544.nab_r',
+                             '548.exchange2_r',
+                             '549.fotonik3d_r',
+                             '554.roms_r',
+                             '557.xz_r',
+                             'Average']
+              },
+           ]
+    print_size: [7.0, 7.0]
+    file_name: split_cpi_ssb_graph.pdf
