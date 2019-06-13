@@ -30,7 +30,7 @@ if len( WORK_DIR ) == 0:
 sys.path.append( WORK_DIR )
 from Checkpoints import GDBCheckpoint
 from CheckpointTemplate import *
-from SpecBench import *
+from ..config.SpecBench import *
 
 import CheckpointConvert
 
