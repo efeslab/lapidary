@@ -1,4 +1,3 @@
-enum
 ipython
 jinja2
 matplotlib
@@ -7,3 +6,4 @@ pandas
 pathlib
 pyelftools
 progressbar2
+pyyaml

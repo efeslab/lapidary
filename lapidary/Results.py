@@ -23,6 +23,7 @@ class RunType(Enum):
     IN_ORDER      = 'in-order'
     OUT_OF_ORDER  = 'out-of-order'
     COOLDOWN      = 'cooldown'
+    INVISISPEC    = 'invisispec'
 
 class Results:
     O3_STAT_NAMES = [ 'sim_insts',
@@ -34,35 +35,49 @@ class Results:
                       'ipc',
                       'avgROBSize',
                       'avgLatencyToIssue',
-                      'system.cpu.icache.numBlocksInitialized',
-                      'system.l2.numBlocksInitialized',
-                      'system.cpu.dcache.numBlocksInitialized',
-                      'system.cpu.icache.overall_misses::total',
-                      'system.cpu.dcache.overall_misses::total',
-                      'system.l2.overall_misses::total',
+                      # 'system.cpu.icache.numBlocksInitialized',
+                      # 'system.l2.numBlocksInitialized',
+                      # 'system.cpu.dcache.numBlocksInitialized',
+                      # 'system.cpu.icache.overall_misses::total',
+                      # 'system.cpu.dcache.overall_misses::total',
+                      # 'system.l2.overall_misses::total',
                       # 'system.cpu.rob.latencyToIssue_totalCycles',
                       # 'system.cpu.rob.latencyToIssue_numInstructions',
                       # 'system.cpu.commit.commitCyclesBreakDown',
                       'system.cpu.rob.robNumEntries_accumulator',
                       # 'system.cpu.branchPred.indirect',
-                      'system.cpu.branchPred.BTB',
-                      '.icache.cacheMisses::R',
-                      '.dcache.cacheMisses::R',
-                      '.l2.cacheMisses::R',
+                      # 'system.cpu.branchPred.BTB',
+                      # '.icache.cacheMisses::R',
+                      # '.dcache.cacheMisses::R',
+                      # '.l2.cacheMisses::R',
                       # '.outstandingMemOperations::',
                       'MLP',
+                      'system.cpu.commit.commitCyclesBreakDown::GeneralStall',
+                      'system.cpu.commit.commitCyclesBreakDown::InstructionFault',
+                      'system.cpu.commit.commitCyclesBreakDown::LoadStall',
+                      'system.cpu.commit.commitCyclesBreakDown::StoreStall',
+                      'system.cpu.commit.commitCyclesBreakDown::LoadOrder',
+                      'system.cpu.commit.commitCyclesBreakDown::StoreOrder',
+                      'system.cpu.commit.commitCyclesBreakDown::MemBarrier',
+                      'system.cpu.commit.commitCyclesBreakDown::WriteBarrier',
+                      'system.cpu.commit.commitCyclesBreakDown::SquashingBranchMispredict',
+                      'system.cpu.commit.commitCyclesBreakDown::SquashingMemoryViolation',
+                      'system.cpu.commit.commitCyclesBreakDown::RetiringSquashes',
+                      'system.cpu.commit.commitCyclesBreakDown::CommitSuccess',
+                      'system.cpu.commit.commitCyclesBreakDown::ROBEmpty',
+                      'system.cpu.commit.commitCyclesBreakDown::total',
                     ]
 
-    IN_ORDER_STAT_NAMES = ['sim_insts', 'sim_ticks', 'cpi', 'ipc']
+    IN_ORDER_STAT_NAMES = ['sim_insts', 'sim_ticks', 'cpi', 'ipc', 'MLP']
 
     def __init__(self, runtype, benchmark_name, stats_file, config_name):
         assert isinstance(runtype, RunType)
         assert isinstance(benchmark_name, str)
         assert isinstance(stats_file, Utils.StatsFile)
-        if runtype == RunType.IN_ORDER:
-            self.in_order = True
+        if runtype == RunType.IN_ORDER or runtype == RunType.INVISISPEC:
+            self.use_in_order_stats = True
         else:
-            self.in_order = False
+            self.use_in_order_stats = False
         self.stats_file = stats_file
         self.warmup_stats = None
         self.final_stats = None
@@ -107,7 +122,7 @@ class Results:
 
         self.final_stats['version'] = 1.0
 
-        if not self.in_order:
+        if not self.use_in_order_stats:
             try:
                 robNumEntriesAccumulator = \
                         self.final_stats['system.cpu.rob.robNumEntries_accumulator']
@@ -116,7 +131,7 @@ class Results:
                 self.final_stats['avgLatencyToIssue'] = \
                                                  float(latencyToIssue_cycles) / float(micro_ops)
                 self.final_stats['avgROBSize'] = float(robNumEntriesAccumulator) / float(cycles)
-                self.final_stats['MLP' ] = self.calcMLP()
+                self.final_stats['MLP'] = self.calcMLP()
             except KeyError as e:
                 print('KeyError: {}'.format(e))
 
@@ -127,7 +142,7 @@ class Results:
 
     def human_stats(self):
         stats = Results.O3_STAT_NAMES
-        if self.in_order:
+        if self.use_in_order_stats:
             stats = Results.IN_ORDER_STAT_NAMES
 
         output = pd.Series(self.final_stats)

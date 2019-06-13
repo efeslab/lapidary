@@ -1,0 +1,60 @@
+display_options:
+  config_names:
+    cooldown_eagerloadsprotection:                     Restricted Loads
+    cooldown_maximumprotection:                        Full Protection
+    cooldown_branchprotection_liberal:                 Permissive
+    cooldown_branchprotection_conservative:            Strict
+    cooldown_branchprotection_liberal_prevent_ssb:                 Permissive+BR
+    cooldown_branchprotection_conservative_prevent_ssb:            Strict+BR
+    inorder:                                           In-Order
+    o3:                                                OoO
+    cooldown_empty:                                    OoO
+    cooldown_branchprotection_liberal_delayedwakeup_0: Permissive, same cycle
+    cooldown_branchprotection_liberal_delayedwakeup_1: Permissive, 1 cycle delay
+    cooldown_branchprotection_liberal_delayedwakeup_2: Permissive, 2 cycle delay
+    cooldown_maximumprotection_delayedwakeup_0:        Full Protection, same cycle
+    cooldown_maximumprotection_delayedwakeup_1:        Full Protection, 1 cycle delay
+    cooldown_maximumprotection_delayedwakeup_2:        Full Protection, 2 cycle delay
+    invisispec_unsafebaseline:                         Baseline (InvisiSpec)
+    invisispec_spectresafeinvisiblespec:               InvisiSpec-Spectre
+    invisispec_futuristicsafeinvisiblespec:            InvisiSpec-Future
+
+  config_colors:
+    OoO :                   '#ccebc5'
+    Permissive:            '#6b8c73'
+    Permissive+BR:      '#86b090'
+    Strict:                '#08589e'
+    Strict+BR:          '#4eb3d3'
+    Restricted Loads:      '#8856a7'
+    Full Protection:       '#b3bcc3'
+    In-Order:              '#cc0000'
+
+    Permissive, same cycle:         '#6b8c73'
+    Permissive, 1 cycle delay:         '#6b8c73'
+    Permissive, 2 cycle delay:         '#6b8c73'
+    Full Protection, same cycle:         '#b3bcc3'
+    Full Protection, 1 cycle delay:         '#b3bcc3'
+    Full Protection, 2 cycle delay:         '#b3bcc3'
+    Baseline (InvisiSpec): '#d0f3c8'
+    InvisiSpec-Spectre:  '#fed98e'
+    InvisiSpec-Future:   '#fe9929'
+
+  config_order:
+    - OoO
+    - Baseline (InvisiSpec)
+    - Permissive
+    - Permissive+BR
+    - Strict
+    - Strict+BR
+    - Restricted Loads
+    - Full Protection
+    - In-Order
+    - Permissive, same cycle
+    - Permissive, 1 cycle delay
+    - Permissive, 2 cycle delay
+    - Full Protection, same cycle
+    - Full Protection, 1 cycle delay
+    - Full Protection, 2 cycle delay
+    - InvisiSpec-Spectre
+    - InvisiSpec-Future
+

@@ -25,6 +25,24 @@ class CooldownConfig:
             m5.debug.flags[ "CD_Clear_DirectUnconditionalBranches_AtDecode" ].enable()
             m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
 
+    class BranchProtection_Conservative_Prevent_SSB:
+        @staticmethod
+        def before_init(system):
+            pass
+        @staticmethod
+        def after_warmup():
+            import m5
+            m5.debug.flags[ "CD_MarkUnsafeIf_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_Clear_MaySquash_AtExec" ].enable()
+            m5.debug.flags[ "CD_Clear_DirectUnconditionalBranches_AtDecode" ].enable()
+            m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
+
+            # SSB defense
+            # 1. Mark loads as unsafe
+            # 2. Allow clearing loads once we no there is no store bypass
+            m5.debug.flags[ "CD_MarkUnsafeIf_LoadtInstruction" ].enable()
+            m5.debug.flags[ "CD_MitigateSSB_ReleaseLoadsWhenThereIsNoBypass" ].enable() 
+
     class BranchProtection_Conservative_SingleCycleSquash:
         @staticmethod
         def before_init(system):
@@ -69,6 +87,77 @@ class CooldownConfig:
 
             m5.debug.flags[ "CD_Allow_NonLoads_AfterBranch" ].enable()
             m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
+
+    class BranchProtection_Liberal_Prevent_SSB:
+        @staticmethod
+        def before_init(system):
+            pass
+        @staticmethod
+        def after_warmup():
+            import m5
+            m5.debug.flags[ "CD_MarkUnsafeIf_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_Clear_MaySquash_AtExec" ].enable()
+            m5.debug.flags[ "CD_Clear_DirectUnconditionalBranches_AtDecode" ].enable()
+
+            m5.debug.flags[ "CD_Allow_NonLoads_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
+
+            # SSB defense
+            # 1. Mark loads as unsafe
+            # 2. Allow clearing loads once we no there is no store bypass
+            m5.debug.flags[ "CD_MarkUnsafeIf_LoadtInstruction" ].enable()
+            m5.debug.flags[ "CD_MitigateSSB_ReleaseLoadsWhenThereIsNoBypass" ].enable() 
+
+    class BranchProtection_Liberal_delayedWakeup_0:
+        @staticmethod
+        def before_init(system):
+            cpu = system.cpu[0]
+            cpu.unsafeClearingDelay.value = 0
+
+        @staticmethod
+        def after_warmup():
+            import m5
+            m5.debug.flags[ "CD_MarkUnsafeIf_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_Clear_MaySquash_AtExec" ].enable()
+            m5.debug.flags[ "CD_Clear_DirectUnconditionalBranches_AtDecode" ].enable()
+
+            m5.debug.flags[ "CD_Allow_NonLoads_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
+            m5.debug.flags[ "CD_DelayUnsafeClearing" ].enable()
+
+    class BranchProtection_Liberal_delayedWakeup_1:
+        @staticmethod
+        def before_init(system):
+            cpu = system.cpu[0]
+            cpu.unsafeClearingDelay.value = 1
+
+        @staticmethod
+        def after_warmup():
+            import m5
+            m5.debug.flags[ "CD_MarkUnsafeIf_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_Clear_MaySquash_AtExec" ].enable()
+            m5.debug.flags[ "CD_Clear_DirectUnconditionalBranches_AtDecode" ].enable()
+
+            m5.debug.flags[ "CD_Allow_NonLoads_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
+            m5.debug.flags[ "CD_DelayUnsafeClearing" ].enable()
+
+    class BranchProtection_Liberal_delayedWakeup_2:
+        @staticmethod
+        def before_init(system):
+            cpu = system.cpu[0]
+            cpu.unsafeClearingDelay.value = 2
+
+        @staticmethod
+        def after_warmup():
+            import m5
+            m5.debug.flags[ "CD_MarkUnsafeIf_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_Clear_MaySquash_AtExec" ].enable()
+            m5.debug.flags[ "CD_Clear_DirectUnconditionalBranches_AtDecode" ].enable()
+
+            m5.debug.flags[ "CD_Allow_NonLoads_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
+            m5.debug.flags[ "CD_DelayUnsafeClearing" ].enable()
 
     class EagerLoadsProtection:
         @staticmethod
@@ -124,6 +213,54 @@ class CooldownConfig:
             m5.debug.flags[ "CD_Clear_DirectUnconditionalBranches_AtDecode" ].enable()
             m5.debug.flags[ "CD_MarkUnsafeIf_LoadtInstruction" ].enable()
             m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
+
+    class MaximumProtection_delayedWakeup_0:
+        @staticmethod
+        def before_init(system):
+            cpu = system.cpu[0]
+            cpu.unsafeClearingDelay.value = 0
+
+        @staticmethod
+        def after_warmup():
+            import m5
+            m5.debug.flags[ "CD_MarkUnsafeIf_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_Clear_MaySquash_AtExec" ].enable()
+            m5.debug.flags[ "CD_Clear_DirectUnconditionalBranches_AtDecode" ].enable()
+            m5.debug.flags[ "CD_MarkUnsafeIf_LoadtInstruction" ].enable()
+            m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
+            m5.debug.flags[ "CD_DelayUnsafeClearing" ].enable()
+
+    class MaximumProtection_delayedWakeup_1:
+        @staticmethod
+        def before_init(system):
+            cpu = system.cpu[0]
+            cpu.unsafeClearingDelay.value = 1
+
+        @staticmethod
+        def after_warmup():
+            import m5
+            m5.debug.flags[ "CD_MarkUnsafeIf_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_Clear_MaySquash_AtExec" ].enable()
+            m5.debug.flags[ "CD_Clear_DirectUnconditionalBranches_AtDecode" ].enable()
+            m5.debug.flags[ "CD_MarkUnsafeIf_LoadtInstruction" ].enable()
+            m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
+            m5.debug.flags[ "CD_DelayUnsafeClearing" ].enable()
+
+    class MaximumProtection_delayedWakeup_2:
+        @staticmethod
+        def before_init(system):
+            cpu = system.cpu[0]
+            cpu.unsafeClearingDelay.value = 2
+
+        @staticmethod
+        def after_warmup():
+            import m5
+            m5.debug.flags[ "CD_MarkUnsafeIf_AfterBranch" ].enable()
+            m5.debug.flags[ "CD_Clear_MaySquash_AtExec" ].enable()
+            m5.debug.flags[ "CD_Clear_DirectUnconditionalBranches_AtDecode" ].enable()
+            m5.debug.flags[ "CD_MarkUnsafeIf_LoadtInstruction" ].enable()
+            m5.debug.flags[ "CD_LimitWakeDependandsToWBWidth" ].enable()
+            m5.debug.flags[ "CD_DelayUnsafeClearing" ].enable()
 
     class MaximumProtection_Runahead_ByNumBlockedBranches_5:
         @staticmethod
@@ -478,6 +615,49 @@ class CooldownConfig:
                 EagerLoadsProtection_SingleCycleSquash,
                 EagerLoadsProtection_Runahead_ByNumBlockedBranches_5,
             ],
+
+            'DELAYED_CLEAR_UNSAFE' : [
+                BranchProtection_Liberal_delayedWakeup_0,
+                BranchProtection_Liberal_delayedWakeup_1,
+                BranchProtection_Liberal_delayedWakeup_2,
+
+                MaximumProtection_delayedWakeup_0,
+                MaximumProtection_delayedWakeup_1,
+                MaximumProtection_delayedWakeup_2,
+            ],
+
+            'EVERYTHING' : [
+                BranchProtection_Liberal_delayedWakeup_0,
+                BranchProtection_Liberal_delayedWakeup_1,
+                BranchProtection_Liberal_delayedWakeup_2,
+
+                MaximumProtection_delayedWakeup_0,
+                MaximumProtection_delayedWakeup_1,
+                MaximumProtection_delayedWakeup_2,
+
+                BranchProtection_Liberal,
+                BranchProtection_Conservative,
+                BranchProtection_Conservative_Prevent_SSB,
+                BranchProtection_Liberal_Prevent_SSB,
+                EagerLoadsProtection,
+                MaximumProtection,
+                Empty # For O3 comparison
+            ], 
+
+            'PREVENT_SSB': [
+                BranchProtection_Conservative_Prevent_SSB,
+                BranchProtection_Liberal_Prevent_SSB,
+            ],
+
+            'PREVENT_SSB_ALL': [
+                BranchProtection_Conservative_Prevent_SSB,
+                BranchProtection_Liberal_Prevent_SSB,
+                BranchProtection_Liberal,
+                BranchProtection_Conservative,
+                EagerLoadsProtection,
+                MaximumProtection,
+                Empty # For O3 comparison
+            ],
     }
 
     @staticmethod
@@ -488,6 +668,8 @@ class CooldownConfig:
             help='Run a specific group of configs (plus in order and OOO')
         parser.add_argument('--list-configs', action='store_true', default=False,
             help='Show available configs')
+        parser.add_argument('--list-groups', action='store_true', default=False,
+            help='Show available groups')
 
     @staticmethod
     def add_optparse_args(parser):
@@ -497,6 +679,10 @@ class CooldownConfig:
     @classmethod
     def _get_config_classes(cls):
         return { k.lower(): v for k, v in cls.__dict__.items() if isclass(v) }
+
+    @classmethod
+    def _get_config_groups(cls):
+        return { k.lower(): v for k, v in cls.GROUPS.items() }
 
     @classmethod
     def is_valid_config(cls, config_name):
@@ -536,8 +722,15 @@ class CooldownConfig:
 
     @classmethod
     def maybe_show_configs(cls, args):
+        do_exit = False
         if args.list_configs:
+            do_exit = True
             pprint([k for k in cls._get_config_classes().keys()])
+        if args.list_groups:
+            do_exit = True
+            pprint([k for k in cls._get_config_groups().keys()])
+
+        if do_exit:
             exit()
 
 

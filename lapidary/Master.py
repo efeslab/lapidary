@@ -15,12 +15,18 @@ def get_configs(args):
         configs = list(CooldownConfig.get_config_group_names(args.config_group))
         configs += ['inorder']
     elif args.config_name is not None:
-        configs = [ c for c in list(CooldownConfig.get_all_config_names()) if args.config_name in c and 'runahead' not in c]
+        configs = [ c for c in list(CooldownConfig.get_all_config_names()) \
+                   if args.config_name in c and 'runahead' not in c]
         if len(configs) > 1:
-            raise Exception('{} matches too many configs: {}'.format(args.config_name, ' '.join(configs)))
+            raise Exception('{} matches too many configs: {}'.format(
+                args.config_name, ' '.join(configs)))
     else:
         configs = list(CooldownConfig.get_config_group_names('grand'))
         configs += ['inorder']
+
+    if args.add_invisispec:
+        configs += ['SpectreSafeInvisibleSpec', 'FuturisticSafeInvisibleSpec',
+                    'UnsafeBaseline']
 
     if len(configs) == 0:
         raise Exception('No valid configs selected!')
@@ -38,11 +44,20 @@ def delete_bad_checkpoints(summary_file):
     count = 0
     with summary_file.open() as f:
         summary = json.load(f)
-        for checkpoint, status in summary['checkpoints'].items():
-            if 'failed' in status and Path(checkpoint).exists():
-                shutil.rmtree(checkpoint)
-                count += 1
+        if 'checkpoints' in summary:
+            for checkpoint, status in summary['checkpoints'].items():
+                if 'failed' in status and Path(checkpoint).exists():
+                    shutil.rmtree(checkpoint)
+                    count += 1
+        else:
+            print('\tNo checkpoints left to delete!')
     print('\tDeleted {} invalid checkpoints'.format(count))
+
+def get_checkpoint_dirs(dir_paths):
+    dirs = [ Path(d) for d in dir_paths ]
+    for d in dirs:
+        assert d.exists()
+    return dirs
 
 def run_all(args):
     checkpoint_root_dir = Path(args.checkpoint_dir)
@@ -53,18 +68,23 @@ def run_all(args):
     benchmarks = get_benchmarks(args)
 
     for benchmark in benchmarks:
+        binary_name = Spec2017Bench.BIN_NAMES[benchmark]
+
+        checkpoint_dir = checkpoint_root_dir / '{}_gdb_checkpoints'.format(binary_name)
+        if args.force_recreate or not checkpoint_dir.exists():
+            print('Generating checkpoints for {}.'.format(benchmark))
+            run(['./GDBProcess.py', '--bench', benchmark, '--directory',
+                checkpoint_root_dir, '--compress'])
+        else:
+            print('Skipping checkpoint generation for {}.'.format(benchmark))
+
+        if args.generate_only:
+            print('Skipping simulation, only generating.')
+            break
+
         for config in configs:
-            config = config.lower()
-
-            binary_name = Spec2017Bench.BIN_NAMES[benchmark]
-
-            checkpoint_dir = checkpoint_root_dir / '{}_gdb_checkpoints'.format(binary_name)
-            if args.force_recreate or not checkpoint_dir.exists():
-                print('Generating checkpoints for {}.'.format(benchmark))
-                run(['./GDBProcess.py', '--bench', benchmark, '--directory',
-                    checkpoint_root_dir])
-            else:
-                print('Skipping checkpoint generation for {}.'.format(benchmark))
+            if 'InvisibleSpec' not in config and 'Unsafe' not in config:
+                config = config.lower()
 
             config_name = config
             if config == 'empty':
@@ -83,13 +103,20 @@ def run_all(args):
             if args.max_checkpoints is not None:
                 sim_args += ['-n', args.max_checkpoints]
 
+            if args.force_rerun:
+                sim_args += ['--force-rerun']
+
             if 'inorder' in config or 'in-order' in config:
                 sim_args += ['--in-order']
                 config = 'inorder'
+            elif 'InvisibleSpec' in config or 'Unsafe' in config:
+                sim_args += ['--invisispec', '--scheme', config]
             else:
                 sim_args += ['--cooldown-config', config]
 
-            run(sim_args)
+            proc = run(sim_args)
+            if proc.returncode:
+                print('ParallelSim exited with error: {}'.format(proc.returncode))
 
             for d in checkpoint_dir.iterdir():
                 if d.is_dir():
@@ -97,8 +124,9 @@ def run_all(args):
                     if stats_file.exists():
                         stats_file.unlink()
 
-            if sim_results.exists():
+            if not proc.returncode and sim_results.exists() and args.delete_bad_checkpoints:
                 delete_bad_checkpoints(sim_results)
+
 
 def main():
     parser = ArgumentParser(description='Automate runs across multiple benchmarks')
@@ -116,9 +144,15 @@ def main():
     parser.add_argument('--max-checkpoints', '-m', nargs='?',
                         help='Specify the max number of checkpoints to simulate')
     parser.add_argument('--checkpoint-dir', '-d',
-                        help='Checkpoint root directory')
+                        help='Checkpoint root directories')
     parser.add_argument('--reverse', action='store_true',
                         help='Reverse benchmark order')
+    parser.add_argument('--generate-only', action='store_true',
+                        help='Only generate benchmarks, no simulations')
+    parser.add_argument('--add-invisispec', action='store_true',
+                        help='Also run Invisispec configs.')
+    parser.add_argument('--delete-bad-checkpoints', action='store_true',
+                        help='If a checkpoint is flakey, delete it!')
 
     args = parser.parse_args()
 

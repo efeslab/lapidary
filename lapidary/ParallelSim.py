@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import datetime
 from fcntl import lockf, LOCK_UN, LOCK_EX
 from multiprocessing import Process, cpu_count, Lock, Pool
-from pathlib import Path
+from pathlib import Path, PosixPath
 from pprint import pprint
 import progressbar
 from progressbar import ProgressBar
@@ -28,6 +28,8 @@ class ParallelSim:
         mode = 'o3'
         if args.in_order:
             mode = 'inorder'
+        elif args.invisispec:
+            mode = 'invisispec_{}'.format(args.scheme)
         elif args.cooldown_config != 'empty':
             mode = 'cooldown_{}'.format(args.cooldown_config)
 
@@ -35,30 +37,51 @@ class ParallelSim:
             args.bench, mode)
 
         self.summary = defaultdict(dict)
-        if self.summary_path.exists():
+        if self.summary_path.exists() and not args.force_rerun:
             print('\tLoading existing results.')
             with self.summary_path.open() as f:
-                self.summary = json.load(f)
-        else:
-            self.summary['mode']  = mode
-            self.summary['bench'] = args.bench
-            self.summary['successful_checkpoints'] = 0
-            self.summary['failed_checkpoints']     = 0
+                raw_dict = json.load(f)
+                for k, v in raw_dict.items():
+                    self.summary[k] = v
+        elif self.summary_path.exists() and args.force_rerun:
+            print('\tIgnoring old summary file to force rerun.')
+
+        self.summary['mode']  = mode
+        self.summary['bench'] = args.bench
+        self.summary['successful_checkpoints'] = 0
+        self.summary['failed_checkpoints']     = 0
 
         assert args.checkpoint_dir is not None
 
         chkdir = Path(args.checkpoint_dir)
         dirents = Utils.get_directory_entries_by_time(chkdir)
-        self.chkpts = [x for x in dirents \
-                if x.is_dir() and \
-                (str(x) not in self.summary['checkpoints'] or \
-                    self.summary['checkpoints'][str(x)] == 'not run')]
+        if 'checkpoints' in self.summary:
+            self.chkpts = [x for x in dirents if x.is_dir()]
+            rm_count = 0
+            for chk, status in self.summary['checkpoints'].items():
+                chk_path = PosixPath(chk)
+                if chk_path in self.chkpts and status != 'not run':
+                    rm_count += 1
+                    self.chkpts.remove(chk_path)
+                    if status == 'failed':
+                        self.summary['failed_checkpoints'] += 1
+                    elif status == 'successful':
+                        self.summary['successful_checkpoints'] += 1
+                elif chk_path not in self.chkpts and status != 'not run':
+                    if status == 'failed':
+                        self.summary['failed_checkpoints'] += 1
+                    elif status == 'successful':
+                        self.summary['successful_checkpoints'] += 1
+
+            print('\tRemoved {} checkpoints from consideration.'.format(rm_count))
+        else:
+            self.chkpts = [x for x in dirents if x.is_dir()]
 
         exp_args = {}
 
         invalid_counter = 0
-        if 'total_checkpoints' not in self.summary:
-            self.summary['total_checkpoints'] = len(self.chkpts)
+        # Always update this, for it could change!
+        self.summary['total_checkpoints'] = len(self.chkpts)
 
         self.result_files = {}
         for chkpt in self.chkpts:
@@ -82,6 +105,8 @@ class ParallelSim:
                 '--cooldown-config', str(args.cooldown_config)]
             if args.in_order:
                 arg_list += ['--in-order']
+            if args.invisispec:
+                arg_list += ['--invisispec', '--scheme', args.scheme]
             exp_args[str(chkpt)] = arg_list
 
             result_file = output_dir / 'res.json'
@@ -98,7 +123,6 @@ class ParallelSim:
         self.num_checkpoints = len(exp_args) + self.summary['successful_checkpoints']
         if args.num_checkpoints is not None:
             self.num_checkpoints = min(args.num_checkpoints, self.num_checkpoints)
-            print(self.num_checkpoints)
             if self.num_checkpoints < args.num_checkpoints:
                 print('Warning: Requested {} checkpoints, but only {} are available.'.format(
                     args.num_checkpoints, self.num_checkpoints))
@@ -161,6 +185,7 @@ class ParallelSim:
             def do_visual_update(self):
                 counter = min(successful_counter, self.num_checkpoints)
                 bar.update(counter)
+
             self.__class__.do_visual_update = do_visual_update
 
             while successful_counter < self.num_checkpoints and \
@@ -281,6 +306,8 @@ class ParallelSim:
             help='Number of checkpoints to simulate. If None, then all.')
         parser.add_argument('--all-configs', action='store_true',
             help='Run parallel sim for all configurations')
+        parser.add_argument('--force-rerun', action='store_true',
+            help='Ignore previous summary files and rerun from scratch')
 
 def main():
     parser = ArgumentParser(description='Run a pool of experiments on gem5.')
@@ -324,8 +351,12 @@ def main():
             sim.start()
 
     else:
-        sim = ParallelSim(args)
-        sim.start()
+        try:
+            sim = ParallelSim(args)
+            sim.start()
+        except Exception as e:
+            print(e)
+            return 1
 
     return 0
 

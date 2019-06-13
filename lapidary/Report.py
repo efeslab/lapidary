@@ -15,6 +15,8 @@ import re
 import Utils
 from SpecBench import *
 from Graph import Grapher
+from NDAGrapher import NDAGrapher
+from NDADataObject import NDADataObject
 
 import pandas as pd
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -34,14 +36,20 @@ class Report:
         res_dir = Path(args.simresult_dir)
         assert res_dir.exists()
 
+        self.verbatim = args.verbatim
+        self.do_intersection = not args.include_all
+
         files = []
         present = defaultdict(lambda: defaultdict(dict))
         self.summary_data  = []
         for dirent in Utils.get_directory_entries_by_time(res_dir):
 
             if dirent.is_file() and 'summary.json' in dirent.name:
-                with dirent.open('r') as f:
-                    self.summary_data += [json.load(f)]
+                try:
+                    with dirent.open('r') as f:
+                        self.summary_data += [json.load(f)]
+                except:
+                    print('Could not open {}'.format(str(dirent)))
 
 
         # benchmark -> configs -> dict{ checkpoint -> series }
@@ -55,7 +63,10 @@ class Report:
             result_dirs = {}
             for c, status in summary['checkpoints'].items():
                 chk_name = Path(c).name
-                num = int(chk_name.split('_')[0])
+                try:
+                    num = int(chk_name.split('_')[0])
+                except:
+                    continue
                 if status == 'successful':
                     result_dirs[num] = res_dir / '{}_{}'.format(chk_prefix, chk_name)
 
@@ -72,8 +83,11 @@ class Report:
                     files += [f]
                     present[benchmark][mode][checkpoint_num] = 1
 
-                    series = pd.read_json(f, typ='series')
-                    self.sim_series[benchmark][mode][checkpoint_num] = series
+                    try:
+                        series = pd.read_json(f, typ='series')
+                        self.sim_series[benchmark][mode][checkpoint_num] = series
+                    except:
+                        present[benchmark][mode][checkpoint_num] = 0
 
                 else:
                     present[benchmark][mode][checkpoint_num] = 0
@@ -131,13 +145,21 @@ class Report:
                 checkpoint_sets.append(checkpoint_results.keys())
 
             all_checkpoints = set(checkpoint_sets[0])
-            all_checkpoints.intersection_update(*checkpoint_sets[1:])
-            print('{} shares {} checkpoints across all configs.'.format(
-                benchmark, len(all_checkpoints)))
+            if self.do_intersection:
+                all_checkpoints.intersection_update(*checkpoint_sets[1:])
+                print('{} shares {} checkpoints across all configs.'.format(
+                    benchmark, len(all_checkpoints)))
+            else:
+                print('For {}...'.format(benchmark))
+                for config_name, checkpoint_results in config_series.items():
+                    print('\t{} has {} checkpoints.'.format(
+                        config_name, len(checkpoint_results)))
 
             only_use = list(all_checkpoints)
 
             for config_name, checkpoint_results in config_series.items():
+                if not self.do_intersection:
+                    only_use = [k for k in checkpoint_results.keys()]
                 df = pd.DataFrame(checkpoint_results)[only_use].T
                 if 'inorder' in config_name:
                     df['MLP'] = pd.Series(list(itertools.repeat(1.0, df.shape[1])))
@@ -149,6 +171,19 @@ class Report:
                 assert stat_nums.min() >= 0
                 stat_ci    = ((1.96 * df.std(ddof=0)) / np.sqrt(stat_nums)).rename('ci')
                 summary_df = pd.DataFrame([stat_means, stat_stdev, stat_ci, stat_nums])
+                if not self.verbatim:
+                    if 'inorder' in config_name or 'invisispec' in config_name:
+                        if 'MLP' not in summary_df:
+                            summary_df['MLP'] = 1.0
+                        summary_df = summary_df[Results.IN_ORDER_STAT_NAMES]
+                    else:
+                        try:
+                            summary_df = summary_df[Results.O3_STAT_NAMES]
+                        except:
+                            for k in Results.O3_STAT_NAMES:
+                                print(k, k in summary_df)
+                            raise
+
                 self.sim_data_frames[benchmark][config_name] = summary_df
 
         return self.sim_data_frames
@@ -164,7 +199,11 @@ class Report:
         self._construct_data_frames()
         results      = self._data_frame_json()
         checkpoints  = self.present
-        report = { 'results': results, 'checkpoints': checkpoints }
+        report = {}
+        if self.verbatim:
+            report = { 'results': results, 'checkpoints': checkpoints }
+        else:
+            report = { 'results': results }
         with open(self.outfile, 'w') as f:
             json.dump(report, f, indent=4)
 
@@ -173,6 +212,7 @@ class Report:
 
 def add_args(parser):
     subparsers = parser.add_subparsers()
+    # For data aggregation!
     process = subparsers.add_parser('process',
                                     help='Aggregate all simulation results')
 
@@ -181,62 +221,35 @@ def add_args(parser):
                          help='Where the res.json files reside.')
     process.add_argument('--output-file', '-o', default='report.json',
                          help='Where to output the report')
+    process.add_argument('--verbatim', '-v', default=False, action='store_true',
+                         help='Output all stats, not just relevant stats.')
+    process.add_argument('--include-all', '-i', default=False, action='store_true',
+                         help='Include all results, not just across matching subsets of checkpoints')
     process.set_defaults(fn=process_fn)
 
 
-
-    summary_fn = lambda args: Grapher(args).output_text()
+    # For summaries!
+    summary_fn = lambda args: Grapher(args).output_text(
+                            NDADataObject(args.input_file).data_by_benchmark())
     summary = subparsers.add_parser('summary',
                                     help='Display relavant results')
     summary.add_argument('--input-file', '-i', default='report.json',
                          help='Where the aggregations live')
     summary.add_argument('--output-dir', '-d', default='.',
-                       help='Where to output the report')
+                         help='Where to output the report')
+    summary.add_argument('--config', '-c', default='graph_config.yaml',
+                         help='What file to use for this dataset.')
     summary.set_defaults(fn=summary_fn)
 
+    # For graphing!
     graph = subparsers.add_parser('graph',
                                   help='Graph from report.json')
-    graph.add_argument('--input-file', '-i', default='report.json',
-                       help='Where the aggregations live')
-    graph.add_argument('--output-dir', '-d', default='.',
-                       help='Where to output the report')
+    NDAGrapher.add_parser_args_graph(graph)
 
-    graph_cmd = graph.add_subparsers()
-    graph_results = graph_cmd.add_parser('results',
-                                     help='Graph from results')
-    graph_results.add_argument('--stat', '-s', default='cpi',
-                               help='what stat to graph')
-    graph_results.add_argument('--filter', '-f', default=None, nargs='+',
-                               help='what benchmarks to filter, all if None')
-    graph_results.add_argument('--exclude-config', '-x', default=[], nargs='+',
-                               help='Exclude some configs by name')
-    graph_results_fn = lambda args: Grapher(args).graph_results_bar(
-                                    args.stat, args.filter, args.exclude_config)
-    graph_results.set_defaults(fn=graph_results_fn)
-
-    graph_points = graph_cmd.add_parser('points', aliases=['checkpoints', 'p'],
-        help='Plot what checkpoints are used')
-    SpecBench.add_parser_args(graph_points)
-
-    graph_points_fn = lambda args: Grapher(args).graph_checkpoints(args.bench)
-    graph_points.set_defaults(fn=graph_points_fn)
-
-    graph_cpi = graph_cmd.add_parser('cpi-breakdown', aliases=['cpi'],
-                                 help='Plot CPI with breakdown side-by-side')
-    graph_cpi_fn = lambda args: Grapher(args).graph_cpi_with_breakdown()
-    graph_cpi.set_defaults(fn=graph_cpi_fn)
-
-    graph_mlp = graph_cmd.add_parser('mlp-latency', aliases=['mlp'],
-                     help='Plot MLP and average-latency-to-issue side-by-side')
-    graph_mlp_fn = lambda args: Grapher(args).graph_mlp_with_latency()
-    graph_mlp.set_defaults(fn=graph_mlp_fn)
-
-    graph_stat = graph_cmd.add_parser('stat', aliases=['s'],
-                                help='Graph a single stat')
-    graph_stat.add_argument('stat', help='What stat to graph')
-    graph_stat_fn = lambda args: Grapher(args).graph_single_stat(args.stat)
-    graph_stat.set_defaults(fn=graph_stat_fn)
-
+    # For the paper!
+    results = subparsers.add_parser('results',
+                                  help='Output results from report.json')
+    NDAGrapher.add_parser_args_text(results)
 
 ################################################################################
 
