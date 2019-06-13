@@ -34,17 +34,8 @@ from SpecBench import *
 
 import CheckpointConvert
 
-'''
-GLIBC_VERSION = '2.27'
-GLIBC_DIR = Path('..') / 'glibc-{}'.format(GLIBC_VERSION) / 'install' / 'lib'
-
-assert GLIBC_DIR.exists()
-
-# TODO: do this per benchmark
-GLIBC_SHARED_OBJECTS = [ str(f) for f in GLIBC_DIR.iterdir()
-    if f.is_file() and GLIBC_VERSION in f.name and 'so' in f.name and 'ld' not in f.name]
-LD_PRELOAD_STR = ' '.join(GLIBC_SHARED_OBJECTS)
-'''
+GLIBC_PATH = Path('../libc/glibc/build/install/lib').resolve()
+LD_LIBRARY_PATH_STR = '{}:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu'.format(GLIBC_PATH)
 
 class GDBProcess:
     ''' This is to set up a subprocess that runs gdb for us. '''
@@ -75,11 +66,6 @@ class GDBProcess:
         os.environ['CHECKPOINT_COMPRESS']   = str(compress)
         os.environ['CHECKPOINT_CONVERT']    = str(convert)
 
-        '''
-        pprint(GLIBC_SHARED_OBJECTS)
-        os.environ['LD_PRELOAD']          = LD_PRELOAD_STR
-        '''
-
     def run(self):
         subprocess.run(self.args)
 
@@ -92,6 +78,8 @@ class GDBEngine:
     VADDR_REGEX = re.compile(VADDR_REGEX_STRING)
 
     BAD_MEM_REGIONS = ['[vvar]', '[vsyscall]']
+
+    SIGNAL = signal.SIGINT
 
     def __init__(self,
                  checkpoint_root_dir,
@@ -236,7 +224,7 @@ class GDBEngine:
 
         # if mmap_end is None:
         #     raise Exception( "Could not find mmap_end" )
-        
+
         # print( "mmapEnd is 0x%x" % mmap_end )
 
         # return mmap_end
@@ -290,7 +278,7 @@ class GDBEngine:
     def _interrupt_in(cls, sec):
         def control_c(pid, seconds):
             sleep(seconds)
-            os.kill(pid, signal.SIGINT)
+            os.kill(pid, cls.SIGNAL)
 
         pid = os.getpid()
         proc = Process(target=control_c, args=(pid, sec))
@@ -315,11 +303,11 @@ class GDBEngine:
         import struct
         lang = gdb.execute('show language', to_string=True).split()[-1].split('"')[0]
         gdb.execute('set language c')
-        
+
         brk_file = Path('/tmp/sbrk.txt' )
         if os.path.exists( brk_file ):
             os.remove( brk_file )
-        
+
         gdb.execute('compile file -raw %s/get_brk.c' % WORK_DIR )
         brk = 0
         print( "#"* 20 + "cwd = %s" % os.getcwd() )
@@ -406,7 +394,7 @@ class GDBEngine:
     def _try_create_checkpoint(self, debug_mode):
         self._poll_background_processes()
 
-        
+
         if self._can_create_valid_checkpoint():
             print('Creating checkpoint #{}'.format(self.chk_num))
             self._create_gem5_checkpoint(debug_mode)
