@@ -1,0 +1,3 @@
+[submodule "test/gem5"]
+	path = test/gem5
+	url = https://github.com/gem5/gem5.git
