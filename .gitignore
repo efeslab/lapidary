@@ -124,3 +124,6 @@ input.program.out
 # SPEC
 *.cfg.*
 spec-cpu2017/result
+
+# Miscellanous
+*.diff
