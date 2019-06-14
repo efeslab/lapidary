@@ -30,9 +30,15 @@ if len( WORK_DIR ) == 0:
 sys.path.append( WORK_DIR )
 from Checkpoints import GDBCheckpoint
 from CheckpointTemplate import *
-from ..config.SpecBench import *
+
+try:
+    from lapidary.config.SpecBench import *
+except ModuleNotFoundError:
+    sys.path.append(str(Path(__file__).parent.parent.parent))
+    from lapidary.config.SpecBench import *
 
 import CheckpointConvert
+from lapidary.config import LapidaryConfig
 
 GLIBC_PATH = Path('../libc/glibc/build/install/lib').resolve()
 LD_LIBRARY_PATH_STR = '{}:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu'.format(GLIBC_PATH)
@@ -491,12 +497,16 @@ def gdb_main():
         checkpoint_locations = os.environ['CHECKPOINT_LOCS'].split()
         engine.run_interact(checkpoint_locations, debug_mode)
 
+#########################################################################
+
 def main():
     parser = ArgumentParser('Create raw checkpoints of a process through GDB')
+    LapidaryConfig.add_config_arguments(parser)
     SpecBench.add_parser_args(parser)
     add_arguments(parser)
 
     args = parser.parse_args()
+    config = args.config
 
     SpecBench.maybe_display_spec_info(args)
 

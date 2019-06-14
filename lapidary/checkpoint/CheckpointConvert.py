@@ -12,7 +12,7 @@ from progressbar import ProgressBar
 from tempfile import NamedTemporaryFile
 from time import sleep
 
-import Utils
+from lapidary.utils import *
 from Checkpoints import GDBCheckpoint
 
 class GDBCheckpointConverter:
@@ -123,7 +123,7 @@ def main():
     assert checkpoint_dir.exists()
 
     pool_args = []
-    for checkpoint_subdir in Utils.get_directory_entries_by_time(checkpoint_dir):
+    for checkpoint_subdir in utils.get_directory_entries_by_time(checkpoint_dir):
         if checkpoint_subdir.is_dir():
             checkpoint = GDBCheckpoint(checkpoint_subdir)
             if checkpoint.is_valid_checkpoint():
@@ -132,7 +132,7 @@ def main():
                 print('{} is not a valid checkpoint, skipping.'.format(checkpoint))
 
     if args.num_checkpoints is not None:
-        pool_args = Utils.select_evenly_spaced(pool_args, args.num_checkpoints)
+        pool_args = utils.select_evenly_spaced(pool_args, args.num_checkpoints)
 
     with Pool(int(args.pool_size)) as pool:
         bar = ProgressBar(max_value=len(pool_args))

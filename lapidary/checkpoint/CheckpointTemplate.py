@@ -2,8 +2,6 @@ from jinja2 import Template
 import os, resource
 import re
 
-import Utils
-
 class MemoryMapping:
     def __init__(self, index, paddr, vaddr, size, offset, flags, name):
         self.index  = index
