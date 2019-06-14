@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, json, sys
+import os, json, sys, copy
 from argparse import ArgumentParser
 from pathlib import Path
 import subprocess
@@ -9,24 +9,30 @@ from inspect import currentframe, getframeinfo
 from pprint import pprint
 import IPython
 
-import Utils
-from Results import *
-from SpecBench import *
-from CooldownConfig import CooldownConfig
+try:
+    from lapidary.utils import *
+except ImportError:
+    sys.path.append(str(Path(__file__).parent.parent.parent))
+    from lapidary.utils import *
+
+from lapidary.Results import *
+from lapidary.config.SpecBench import *
+from lapidary.CooldownConfig import CooldownConfig
+from lapidary.config import LapidaryConfig
 
 WORK_DIR = os.path.dirname(__file__)
 if len( WORK_DIR ) == 0:
     WORK_DIR = "."
-sys.path.append( WORK_DIR + "/../syscalls_hook" )
-from SyscallsHook import syscallsHook
 
 import pandas as pd
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
 gem5_dir    = Path('..') / 'gem5'
+sys.path.append(str(gem5_dir / '/configs/'))
 gem5_opt    = gem5_dir / 'build' / 'X86' / 'gem5.opt'
 gem5_debug  = gem5_dir / 'build' / 'X86' / 'gem5.debug'
-gem5_script = Path('.') / 'se_run_experiment.py' #This script will call RunExperiment below
+gem5_script = Path(__file__).parent / 'se_run_experiment.py' #This script will call RunExperiment below
+pythonpath = ''
 
 def PrintFrameInfo( prefix, frameinfo ):
     print( prefix + "%s:%s:%s" % (      os.path.abspath( frameinfo.filename ),
@@ -88,7 +94,7 @@ def RunExperiment( options, root, system, FutureClass ):
     print(outdir)
     m5.core.setOutputDir(str(outdir))
 
-    stats_file = Utils.StatsFile(outdir / 'stats.txt')
+    stats_file = StatsFile(outdir / 'stats.txt')
     res_file = outdir / 'res.json'
 
     runType = RunType.OUT_OF_ORDER
@@ -104,13 +110,9 @@ def RunExperiment( options, root, system, FutureClass ):
 
     cpu = system.cpu[0]
     # cpu.sparseCommitLogThreshhold = 10
-    cpu.sparseCommitLogThreshhold = 5*1000*1000
-    if options.syscalls_hook:	
-        print( "Setting up syscalls hook" )
-        cpu.syscallsHook.value = syscallsHook.syscallHookAddr
-        syscallsHook.setSTraceFile( "/home/ofir/git/selective-speculation/nginx/nginx-1.14.2/strace.txt.emulate" )
+    #cpu.sparseCommitLogThreshhold = 5*1000*1000
 
-    m5.debug.flags[ 'SparseCommit' ].enable()
+    #m5.debug.flags[ 'SparseCommit' ].enable()
 
     # m5.debug.flags[ 'O3CPU' ].enable()
     if options.checkpoint is not None:
@@ -120,8 +122,6 @@ def RunExperiment( options, root, system, FutureClass ):
         m5.instantiate()
 
     #m5.debug.flags[ 'Fetch' ].enable()
-    m5.debug.flags[ 'SyscallAll' ].enable()
-    m5.debug.flags[ 'SysCalls' ].enable()
     # m5.debug.flags[ 'DumpROB' ].enable()
     # m5.debug.flags[ 'DumpROB_show_addr' ].enable()
     # m5.debug.flags[ 'Commit' ].enable()
@@ -250,7 +250,7 @@ def run_binary_on_gem5(bin_path, bin_args, parsed_args):
         mappings_file = Path(parsed_args.start_checkpoint) / 'mappings.json'
         if not mappings_file.exists():
             raise Exception('{} does not exist!'.format(str(mappings_file)))
-        mem_size = Utils.get_mem_size_from_mappings_file(mappings_file)
+        mem_size = get_mem_size_from_mappings_file(mappings_file)
         extra_args += [ '--mem-size', str(mem_size) ]
     else:
         extra_args += [ '--mem-size', str(parsed_args.mem_size) ]
@@ -279,7 +279,9 @@ def run_binary_on_gem5(bin_path, bin_args, parsed_args):
     #     if f.is_file() and GLIBC_VERSION in f.name and 'so' in f.name and 'ld' not in f.name]
     # LD_PRELOAD_STR = ' '.join(GLIBC_SHARED_OBJECTS)
     # os.environ['LD_PRELOAD'] = LD_PRELOAD_STR
-    return subprocess.call(gem5_args, env=os.environ)
+    env = copy.deepcopy(os.environ)
+    env['PYTHONPATH'] = str(pythonpath)
+    return subprocess.call(gem5_args, env=env)
 
 def do_make(target=''):
     ret = os.system('make {}'.format(target))
@@ -310,6 +312,7 @@ def main():
     SpecBench.add_parser_args(parser)
     add_experiment_args(parser)
     CooldownConfig.add_parser_args(parser)
+    LapidaryConfig.add_config_arguments(parser)
 
     parser.add_argument('--start-checkpoint',
                         default=None, help=('Checkpoint to start simulating from.'
@@ -323,6 +326,16 @@ def main():
                         default=False, help='Use strace log to replace syscalls')
 
     args = parser.parse_args()
+    config = LapidaryConfig.get_config(args)
+    global gem5_dir
+    global gem5_opt
+    global gem5_debug
+    global pythonpath
+
+    gem5_dir    = config['gem5_path']
+    gem5_opt    = gem5_dir / 'build' / 'X86' / 'gem5.opt'
+    gem5_debug  = gem5_dir / 'build' / 'X86' / 'gem5.debug'
+    pythonpath  = gem5_dir / 'configs'
 
     if args.bench is not None and args.binary is not None:
         raise Exception('Can only pick one!')

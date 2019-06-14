@@ -13,7 +13,7 @@ from tempfile import NamedTemporaryFile
 from time import sleep
 
 from lapidary.utils import *
-from Checkpoints import GDBCheckpoint
+from lapidary.checkpoint.Checkpoints import GDBCheckpoint
 
 class GDBCheckpointConverter:
 

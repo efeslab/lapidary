@@ -53,8 +53,6 @@ from m5.defines import buildEnv
 from m5.objects import *
 from m5.util import addToPath, fatal, warn
 
-addToPath('../gem5/configs/')
-
 from ruby import Ruby
 
 from common import Options
@@ -66,7 +64,12 @@ from common.Caches import *
 from common.cpu2000 import *
 
 def add_benchmark_args(parser):
-    from CooldownConfig import CooldownConfig
+    try:
+        from lapidary.CooldownConfig import CooldownConfig
+    except ImportError:
+        from pathlib import Path
+        sys.path.append(str(Path(__file__).parent.parent.parent))
+        from lapidary.CooldownConfig import CooldownConfig
     CooldownConfig.add_optparse_args(parser)
 
     parser.add_option('--reportable-insts', dest='reportable_insts',

@@ -36,3 +36,6 @@ class LapidaryConfig(dict):
                             help=('Load simulation configurations from the '
                                   'specified YAML file.'))
 
+    @classmethod
+    def get_config(cls, args):
+        return cls(args.config)

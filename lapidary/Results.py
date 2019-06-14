@@ -11,9 +11,9 @@ from pathlib import Path
 from pprint import pprint
 import re
 
-import Utils
-from SpecBench import *
-from Graph import Grapher
+from lapidary.utils import *
+from lapidary.config.SpecBench import *
+#from lapidary.Graph import Grapher
 
 import pandas as pd
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -73,7 +73,7 @@ class Results:
     def __init__(self, runtype, benchmark_name, stats_file, config_name):
         assert isinstance(runtype, RunType)
         assert isinstance(benchmark_name, str)
-        assert isinstance(stats_file, Utils.StatsFile)
+        assert isinstance(stats_file, StatsFile)
         if runtype == RunType.IN_ORDER or runtype == RunType.INVISISPEC:
             self.use_in_order_stats = True
         else:

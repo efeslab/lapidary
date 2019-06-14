@@ -6,8 +6,8 @@ from pathlib import Path
 from pprint import pprint
 from subprocess import run
 
-from CooldownConfig import CooldownConfig
-from SpecBench import SpecBench, Spec2017Bench
+from lapidary.CooldownConfig import CooldownConfig
+from lapidary.config.SpecBench import SpecBench, Spec2017Bench
 
 def get_configs(args):
     configs = []
