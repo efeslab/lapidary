@@ -1,5 +1,10 @@
+import lapidary.simulate.Experiment as Experiment
+import lapidary.utils
+from lapidary.config.SpecBench import *
+
 import json
 import os
+import progressbar
 
 from argparse import ArgumentParser
 from collections import defaultdict
@@ -8,14 +13,10 @@ from fcntl import lockf, LOCK_UN, LOCK_EX
 from multiprocessing import Process, cpu_count, Lock, Pool
 from pathlib import Path, PosixPath
 from pprint import pprint
-import progressbar
 from progressbar import ProgressBar
 from subprocess import Popen, PIPE, DEVNULL
 from time import time, sleep
 
-import Experiment, Utils
-from SpecBench import *
-from CooldownConfig import CooldownConfig
 
 class ParallelSim:
 
@@ -291,9 +292,9 @@ class ParallelSim:
 
     @staticmethod
     def add_args(parser):
-        SpecBench.add_parser_args(parser)
+        # SpecBench.add_parser_args(parser)
         Experiment.add_experiment_args(parser)
-        CooldownConfig.add_parser_args(parser)
+        # CooldownConfig.add_parser_args(parser)
 
         parser.add_argument('--checkpoint-dir', '-d',
                             help='Locations of all the checkpoints')
@@ -309,11 +310,11 @@ class ParallelSim:
             help='Ignore previous summary files and rerun from scratch')
 
     @classmethod
-    def main(cls):
-        parser = ArgumentParser(description='Run a pool of experiments on gem5.')
-        cls.add_args(parser)
+    def main(cls, args):
+        # parser = ArgumentParser(description='Run a pool of experiments on gem5.')
+        # cls.add_args(parser)
 
-        args = parser.parse_args()
+        # args = parser.parse_args()
         SpecBench.maybe_display_spec_info(args)
         CooldownConfig.maybe_show_configs(args)
 

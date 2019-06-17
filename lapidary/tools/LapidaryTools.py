@@ -21,7 +21,8 @@ class LapidaryTools:
 
         for cmd_name, arg_add_fn in self:
             cmd = subparsers.add_parser(cmd_name)
-            arg_add_fn(cmd)
+            run_fn = arg_add_fn(cmd)
+            parser.set_defaults(fn=run_fn)
     
     @staticmethod
     @ToolDecorator("create")
@@ -29,17 +30,27 @@ class LapidaryTools:
         from lapidary.tools import GDBProcess
         GDBProcess.add_args(parser)
 
-        run = lambda args: GDBProcess.main(args)
-        parser.set_defaults(fn=run)
+        return lambda args: GDBProcess.main(args)
 
     @staticmethod
     @ToolDecorator("simulate")
     def add_simulate_args(parser):
-        pass
+        from lapidary.simulate import Experiment
+        Experiment.add_experiment_args(parser)
+
+        return lambda args: Experiment.do_experiment(args)
+
+    @staticmethod
+    @ToolDecorator("parallel-simulate")
+    def add_parallel_simulate_args(parser):
+        from lapidary.simulate.ParallelSim import ParallelSim
+        ParallelSim.add_args(parser)
+
+        return lambda args: ParallelSim.main()
 
     def __iter__(self):
         import inspect
-        fns = inspect.getmembers(self, inspect.method)
+        fns = inspect.getmembers(self, inspect.isfunction)
         for fname, fn in fns:
             if not hasattr(fn, '__wrapped__') or not fn.__wrapped__:
                 print(fname)
@@ -47,6 +58,6 @@ class LapidaryTools:
                 embed()
                 continue
             yield fn.command_name, fn
-            
+
     def parse_args(self):
         return self.parser.parse_args()

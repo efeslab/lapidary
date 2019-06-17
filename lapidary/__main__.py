@@ -1,5 +1,7 @@
 from lapidary.tools import LapidaryTools
 
+from argparse import ArgumentParser
+
 def main():
     parser = ArgumentParser()
     tools = LapidaryTools(parser)
