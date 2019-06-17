@@ -131,3 +131,6 @@ v/
 lapidary-vscode.code-workspace
 .vscode/launch.json
 .vscode/settings.json
+
+# glibc chicanery
+libc/glibc

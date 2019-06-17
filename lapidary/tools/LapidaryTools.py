@@ -22,7 +22,7 @@ class LapidaryTools:
         for cmd_name, arg_add_fn in self:
             cmd = subparsers.add_parser(cmd_name)
             run_fn = arg_add_fn(cmd)
-            parser.set_defaults(fn=run_fn)
+            cmd.set_defaults(fn=run_fn)
     
     @staticmethod
     @ToolDecorator("create")

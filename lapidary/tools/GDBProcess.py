@@ -1,4 +1,6 @@
-import gzip, json, os, re, resource, signal, shutil, subprocess, sys
+import gzip, json, os, re, resource, signal, shutil, subprocess, sys, copy
+
+import glob, shlex
 
 from argparse import ArgumentParser
 from elftools.elf.elffile import ELFFile
@@ -52,24 +54,33 @@ class GDBProcess:
                        root_dir='.',
                        compress=False,
                        convert=True,
-                       debug_mode=False):
+                       debug_mode=False,
+                       ld_path=None):
 
         set_arg_string = 'set $args = "{}"'.format(' '.join(arg_list))
         print(set_arg_string)
         self.args = ['gdb', '--batch', '-ex', set_arg_string, '-x', __file__]
 
-        if checkpoint_instructions is not None:
-            os.environ['CHECKPOINT_INSTS']    = str(checkpoint_instructions)
-        elif checkpoint_locations is not None:
-            os.environ['CHECKPOINT_LOCS']     = ' '.join(checkpoint_locations)
-        elif checkpoint_interval is not None:
-            os.environ['CHECKPOINT_INTERVAL'] = str(checkpoint_interval)
+        env = copy.deepcopy(os.environ)
 
-        os.environ['CHECKPOINT_MAXIMUM']    = str(max_checkpoints)
-        os.environ['CHECKPOINT_DEBUG']      = str(debug_mode)
-        os.environ['CHECKPOINT_ROOT_DIR']   = str(root_dir)
-        os.environ['CHECKPOINT_COMPRESS']   = str(compress)
-        os.environ['CHECKPOINT_CONVERT']    = str(convert)
+        if checkpoint_instructions is not None:
+            env['CHECKPOINT_INSTS']    = str(checkpoint_instructions)
+        elif checkpoint_locations is not None:
+            env['CHECKPOINT_LOCS']     = ' '.join(checkpoint_locations)
+        elif checkpoint_interval is not None:
+            env['CHECKPOINT_INTERVAL'] = str(checkpoint_interval)
+
+        env['CHECKPOINT_MAXIMUM']    = str(max_checkpoints)
+        env['CHECKPOINT_DEBUG']      = str(debug_mode)
+        env['CHECKPOINT_ROOT_DIR']   = str(root_dir)
+        env['CHECKPOINT_COMPRESS']   = str(compress)
+        env['CHECKPOINT_CONVERT']    = str(convert)
+
+        if ld_path is not None:
+            assert ld_path.exists()
+            env['CUSTOM_LD'] = str(ld_path)
+
+        self.env = env
 
     def run(self):
         subprocess.run(self.args)
@@ -134,18 +145,36 @@ def main(args):
     #add_arguments(parser)
 
     #args = parser.parse_args()
-    config = args.config
+    config = LapidaryConfig.get_config(args)
+
+    ld_path = None
+    if 'libc_path' in config:
+        ld_sos = glob.glob(f"{config['libc_path']}/lib/ld*.so")
+        assert len(ld_sos) == 1
+        ld_path = ld_sos[0]
 
     SpecBench.maybe_display_spec_info(args)
 
     if args.cmd and args.bench:
         raise Exception('Can only pick one!')
 
-
     arg_list = []
     gdbprocs = []
     if args.cmd:
+        if ld_path is not None:
+            bin_name = args.cmd[0]
+            new_bin  = bin_name + '.mod'
+            if not Path(new_bin).exists():
+                shutil.copyfile(bin_name, new_bin)
+                shutil.copymode(bin_name, new_bin)
+                cmdstr = f'patchelf --set-interpreter {ld_path} {new_bin}'
+                subprocess.check_call(shlex.split(cmdstr))
+            
+            args.cmd[0] = new_bin
+
         arg_list = args.cmd
+        print(arg_list)
+        print(config)
         gdbproc = GDBProcess(arg_list,
                              checkpoint_interval=args.interval,
                              checkpoint_instructions=args.stepi,

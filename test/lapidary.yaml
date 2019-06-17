@@ -1,1 +1,2 @@
 gem5_path: ./gem5
+libc_path: ../libc/glibc/build/install

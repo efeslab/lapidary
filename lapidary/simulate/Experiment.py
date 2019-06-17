@@ -106,22 +106,12 @@ def RunExperiment( options, root, system, FutureClass ):
     # before_init_config(system)
 
     cpu = system.cpu[0]
-    # cpu.sparseCommitLogThreshhold = 10
-    #cpu.sparseCommitLogThreshhold = 5*1000*1000
 
-    #m5.debug.flags[ 'SparseCommit' ].enable()
-
-    # m5.debug.flags[ 'O3CPU' ].enable()
     if options.checkpoint is not None:
         assert checkpoint_in.exists()
         m5.instantiate(str(checkpoint_in))
     else:
         m5.instantiate()
-
-    #m5.debug.flags[ 'Fetch' ].enable()
-    # m5.debug.flags[ 'DumpROB' ].enable()
-    # m5.debug.flags[ 'DumpROB_show_addr' ].enable()
-    # m5.debug.flags[ 'Commit' ].enable()
 
     try:
         limit = max(int(num_warmup_insts * 0.01 * 500), 1000 * 500)
@@ -142,13 +132,6 @@ def RunExperiment( options, root, system, FutureClass ):
             percentCompleted  = ( float(warmup_insts_done) / num_warmup_insts ) * 100
             print('{:5.2f}% inst: {}/{}'.format(
               percentCompleted, warmup_insts_done, num_warmup_insts))
-
-            # if percentCompleted > 6.5:
-            #     m5.debug.flags[ 'Fetch' ].enable()
-            #     m5.debug.flags[ 'SparseCommit' ].enable()
-            #     # m5.debug.flags[ 'Commit' ].enable()
-            #     # m5.debug.flags[ 'IEW' ].enable()
-            #     m5.debug.flags[ 'TLB' ].enable()
 
             if quit:
                 return
