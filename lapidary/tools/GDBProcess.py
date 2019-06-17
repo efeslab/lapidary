@@ -122,13 +122,18 @@ def gdb_main():
 
 #########################################################################
 
-def main():
-    parser = ArgumentParser('Create raw checkpoints of a process through GDB')
+def add_args(parser):
     LapidaryConfig.add_config_arguments(parser)
     SpecBench.add_parser_args(parser)
     add_arguments(parser)
 
-    args = parser.parse_args()
+def main(args):
+    #parser = ArgumentParser('Create raw checkpoints of a process through GDB')
+    #LapidaryConfig.add_config_arguments(parser)
+    #SpecBench.add_parser_args(parser)
+    #add_arguments(parser)
+
+    #args = parser.parse_args()
     config = args.config
 
     SpecBench.maybe_display_spec_info(args)

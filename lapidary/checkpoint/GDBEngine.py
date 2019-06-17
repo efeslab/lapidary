@@ -22,12 +22,10 @@ Popen.is_alive = is_alive
 from tempfile import NamedTemporaryFile
 from time import sleep
 
-WORK_DIR = os.path.dirname(__file__)
-if len( WORK_DIR ) == 0:
-    WORK_DIR = "."
-sys.path.append( WORK_DIR )
-from Checkpoints import GDBCheckpoint
-from CheckpointTemplate import *
+# WORK_DIR = os.path.dirname(__file__)
+# if len( WORK_DIR ) == 0:
+#     WORK_DIR = "."
+# sys.path.append( WORK_DIR )
 
 try:
     from lapidary.config.SpecBench import *
@@ -35,7 +33,9 @@ except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).parent.parent.parent))
     from lapidary.config.SpecBench import *
 
-import CheckpointConvert
+from lapidary.checkpoint.Checkpoints import GDBCheckpoint
+from lapidary.checkpoint.CheckpointTemplate import *
+from lapidary.checkpoint import CheckpointConvert
 from lapidary.config import LapidaryConfig
 
 GLIBC_PATH = Path('../libc/glibc/build/install/lib').resolve()
@@ -56,7 +56,7 @@ class GDBEngine:
                  checkpoint_root_dir,
                  compress_core_files,
                  convert_checkpoints):
-        from GDBShell import GDBShell
+        from lapidary.checkpoint.GDBShell import GDBShell
         import gdb
         self.shell = GDBShell(self)
         self.chk_num = 0
@@ -83,6 +83,7 @@ class GDBEngine:
 
     @classmethod
     def _get_virtual_addresses(cls):
+        import gdb
         vaddrs = [0]
         sizes = [resource.getpagesize()]
         offsets = [0]
@@ -152,6 +153,7 @@ class GDBEngine:
         return proc
 
     def _dump_core_to_file(self, file_path):
+        import gdb
         gdb.execute('set use-coredump-filter off')
         gdb.execute('set dump-excluded-mappings on')
         gdb.execute('gcore {}'.format(str(file_path)))
@@ -271,7 +273,7 @@ class GDBEngine:
 
     @staticmethod
     def _get_brk_value():
-        import struct
+        import struct, gdb
         lang = gdb.execute('show language', to_string=True).split()[-1].split('"')[0]
         gdb.execute('set language c')
 
@@ -300,7 +302,7 @@ class GDBEngine:
 
     @staticmethod
     def _get_fs_base():
-        import struct
+        import struct, gdb
         lang = gdb.execute('show language', to_string=True).split()[-1].split('"')[0]
         gdb.execute('set language c')
         gdb.execute('compile file -raw %s/get_fs_base.c' % WORK_DIR )
@@ -321,6 +323,7 @@ class GDBEngine:
         return fs_base
 
     def _run_base(self, debug_mode):
+        import gdb
         gdb.execute('set auto-load safe-path /')
         gdb.execute('exec-file {}'.format(self.binary))
         gdb.execute('file {}'.format(self.binary))
@@ -387,6 +390,7 @@ class GDBEngine:
 
 
     def run_inst(self, insts_between_chk, max_iter, debug_mode):
+        import gdb
         print('Running with {} instructions between checkpoints.'.format(
           insts_between_chk))
         self._run_base(debug_mode)
@@ -400,6 +404,7 @@ class GDBEngine:
                 return
 
     def run_interact(self, breakpoints, debug_mode):
+        import gdb
         print('Running with {} breakpoints.'.format(len(breakpoints)))
         for breakpoint in breakpoints:
             gdb.execute('set breakpoint pending on')
