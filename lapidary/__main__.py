@@ -1,23 +1,10 @@
-from argparse import ArgumentParser
-
-def add_create_args(parser):
-    from lapidary.tools import GDBProcess
-    GDBProcess.add_args(parser)
-
-    run = lambda args: GDBProcess.main(args)
-    parser.set_defaults(fn=run)
-
-def add_parser_args(parser):
-    subparsers = parser.add_subparsers()
-
-    create = subparsers.add_parser('create')
-    add_create_args(create)
+from lapidary.tools import LapidaryTools
 
 def main():
     parser = ArgumentParser()
-    add_parser_args(parser)
+    tools = LapidaryTools(parser)
 
-    args = parser.parse_args()
+    args = tools.parse_args()
 
     args.fn(args)
 

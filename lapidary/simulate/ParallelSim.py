@@ -1,4 +1,3 @@
-#! /usr/bin/env python3
 import json
 import os
 
@@ -309,56 +308,54 @@ class ParallelSim:
         parser.add_argument('--force-rerun', action='store_true',
             help='Ignore previous summary files and rerun from scratch')
 
-def main():
-    parser = ArgumentParser(description='Run a pool of experiments on gem5.')
-    ParallelSim.add_args(parser)
+    @classmethod
+    def main(cls):
+        parser = ArgumentParser(description='Run a pool of experiments on gem5.')
+        cls.add_args(parser)
 
-    args = parser.parse_args()
-    SpecBench.maybe_display_spec_info(args)
-    CooldownConfig.maybe_show_configs(args)
+        args = parser.parse_args()
+        SpecBench.maybe_display_spec_info(args)
+        CooldownConfig.maybe_show_configs(args)
 
-    benchmarks = SpecBench.get_benchmarks(args)
+        benchmarks = SpecBench.get_benchmarks(args)
 
-    if len(benchmarks) != 1:
-        raise Exception(
-                'For now, ParallelSim only supports one benchmark at a time.')
+        if len(benchmarks) != 1:
+            raise Exception(
+                    'For now, ParallelSim only supports one benchmark at a time.')
 
-    benchmark = benchmarks[0]
+        benchmark = benchmarks[0]
 
-    print('ParallelSim for {}'.format(benchmark))
-    args.bench = benchmark
-    if args.all_configs or args.config_group is not None:
-        config_names = CooldownConfig.get_all_config_names() \
-                        if args.all_configs \
-                        else CooldownConfig.get_config_group_names(args.config_group)
-        # Run In-Order:
-        args.in_order = True
-        print('In-order simulation')
-        sim = ParallelSim(args)
-        sim.start()
-        # Run everything else:
-        args.in_order = False
-        for cooldown_config_name in config_names:
-            if cooldown_config_name == 'default':
-                print('Skipping default configuration')
-                continue
-            if cooldown_config_name == 'empty':
-                print('Out-of-order simulation')
-            else:
-                print('Cooldown config {} simulation'.format(cooldown_config_name))
-            args.cooldown_config = cooldown_config_name
-            sim = ParallelSim(args, append_log_file=True)
-            sim.start()
-
-    else:
-        try:
+        print('ParallelSim for {}'.format(benchmark))
+        args.bench = benchmark
+        if args.all_configs or args.config_group is not None:
+            config_names = CooldownConfig.get_all_config_names() \
+                            if args.all_configs \
+                            else CooldownConfig.get_config_group_names(args.config_group)
+            # Run In-Order:
+            args.in_order = True
+            print('In-order simulation')
             sim = ParallelSim(args)
             sim.start()
-        except Exception as e:
-            print(e)
-            return 1
+            # Run everything else:
+            args.in_order = False
+            for cooldown_config_name in config_names:
+                if cooldown_config_name == 'default':
+                    print('Skipping default configuration')
+                    continue
+                if cooldown_config_name == 'empty':
+                    print('Out-of-order simulation')
+                else:
+                    print('Cooldown config {} simulation'.format(cooldown_config_name))
+                args.cooldown_config = cooldown_config_name
+                sim = ParallelSim(args, append_log_file=True)
+                sim.start()
 
-    return 0
+        else:
+            try:
+                sim = cls(args)
+                sim.start()
+            except Exception as e:
+                print(e)
+                return 1
 
-if __name__ == '__main__':
-    exit(main())
+        return 0
