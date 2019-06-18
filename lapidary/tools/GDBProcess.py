@@ -30,10 +30,10 @@ if len( WORK_DIR ) == 0:
 sys.path.append( WORK_DIR )
 
 try:
-    from lapidary.config.SpecBench import *
+    from lapidary.config.specbench.SpecBench import *
 except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).parent.parent.parent))
-    from lapidary.config.SpecBench import *
+    from lapidary.config.specbench.SpecBench import *
 
 from lapidary.checkpoint.Checkpoints import GDBCheckpoint
 from lapidary.checkpoint.CheckpointTemplate import *

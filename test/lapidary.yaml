@@ -3,3 +3,6 @@ gem5_features:
   syscall_trace: true
 
 libc_path: ../libc/glibc/build/install
+
+spec2017_path:
+  

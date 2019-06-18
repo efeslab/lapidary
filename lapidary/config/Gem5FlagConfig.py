@@ -2,36 +2,28 @@ from argparse import ArgumentParser
 from inspect import isclass
 from pprint import pprint
 
-class Gem5FlagConfig:
+class FlagConfigure:
+    @staticmethod
+    def before_init(system):
+        pass
+        
+    @staticmethod
+    def after_warmup():
+        pass
 
-    class Empty:
-        @staticmethod
-        def before_init(system):
-            pass
-        @staticmethod
-        def after_warmup():
-            pass
+class Gem5FlagConfig:
 
     # Maps group name to list of classes
     GROUPS = {
             'Empty': [Empty]
     }
 
-    @staticmethod
-    def add_parser_args(parser):
-        parser.add_argument('--cooldown-config', default='empty',
-            help='Enable Cooldown with a specific variant')
-        parser.add_argument('--config-group', default=None,
-            help='Run a specific group of configs (plus in order and OOO')
-        parser.add_argument('--list-configs', action='store_true', default=False,
-            help='Show available configs')
-        parser.add_argument('--list-groups', action='store_true', default=False,
-            help='Show available groups')
-
-    @staticmethod
-    def add_optparse_args(parser):
-        parser.add_option('--cooldown-config', default='empty',
-            help='Enable Cooldown with a specific variant')
+    @classmethod
+    def add_class_to_group(cls, config_class, group_name):
+        assert isinstance(config_class, FlagConfigure)
+        if group_name not in cls.GROUPS:
+            cls.GROUPS[group_name] = []
+        cls.GROUPS[group_name] += [config_class]
 
     @classmethod
     def _get_config_classes(cls):
@@ -89,4 +81,21 @@ class Gem5FlagConfig:
 
         if do_exit:
             exit()
+    
+    # Parser arguments
 
+    @staticmethod
+    def add_parser_args(parser):
+        parser.add_argument('--cooldown-config', default='empty',
+            help='Enable Cooldown with a specific variant')
+        parser.add_argument('--config-group', default=None,
+            help='Run a specific group of configs (plus in order and OOO')
+        parser.add_argument('--list-configs', action='store_true', default=False,
+            help='Show available configs')
+        parser.add_argument('--list-groups', action='store_true', default=False,
+            help='Show available groups')
+
+    @staticmethod
+    def add_optparse_args(parser):
+        parser.add_option('--cooldown-config', default='empty',
+            help='Enable Cooldown with a specific variant')

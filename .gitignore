@@ -136,3 +136,5 @@ lapidary-vscode.code-workspace
 libc/glibc
 script.txt
 gem5/stats.txt
+.noseids
+.vscode/tags
