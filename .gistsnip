@@ -1,0 +1,41 @@
+{
+    "Description": "",
+    "Snippets": {
+        "example#runlapidary.sh": {
+            "GistID": "74dca556172feb63c12b30eb7ffe0560",
+            "GistURL": "https://gist.github.com/74dca556172feb63c12b30eb7ffe0560",
+            "Line": 1,
+            "File": "example.sh",
+            "Path": "example#runlapidary.sh",
+            "Name": "runlapidary",
+            "Content": "python3 -m lapidary create --cmd ./test/bin/test --interval 1 -c ./test/lapidary.yaml\npython3 -m lapidary parallel-simulate --directory ./test_checkpoints -c ./test/lapidary.yaml"
+        },
+        "gistsnip/README#example.md": {
+            "GistID": "f46f2945ddc9c250fe804d0c45cb60a8",
+            "GistURL": "https://gist.github.com/f46f2945ddc9c250fe804d0c45cb60a8",
+            "Line": 15,
+            "File": "gistsnip/README.md",
+            "Path": "gistsnip/README#example.md",
+            "Name": "example",
+            "Content": "    fmt.Println(\"hello world\")\n    "
+        },
+        "gistsnip/README#loop.md": {
+            "GistID": "b5f89b2b6655bdcd7e0c16351c27d141",
+            "GistURL": "https://gist.github.com/b5f89b2b6655bdcd7e0c16351c27d141",
+            "Line": 9,
+            "File": "gistsnip/README.md",
+            "Path": "gistsnip/README#loop.md",
+            "Name": "loop",
+            "Content": "    for i := 0; i \u003c 100; i++ {\n        fmt.Println(i)\n    }\n    "
+        },
+        "lapidary/checkpoint/get_fs_base#fsreghack2.c": {
+            "GistID": "4f8473c549bda96aa32c6d520cd808f8",
+            "GistURL": "https://gist.github.com/4f8473c549bda96aa32c6d520cd808f8",
+            "Line": 1,
+            "File": "lapidary/checkpoint/get_fs_base.c",
+            "Path": "lapidary/checkpoint/get_fs_base#fsreghack2.c",
+            "Name": "fsreghack2",
+            "Content": "#define _GNU_SOURCE\n#include \u003cunistd.h\u003e\n#include \u003cstdlib.h\u003e\n#include \u003cstdint.h\u003e\n#include \u003cstdio.h\u003e\n#include \u003cstdarg.h\u003e\n#include \u003csys/syscall.h\u003e\n#include \u003csys/types.h\u003e\n#include \u003csys/stat.h\u003e\n#include \u003cfcntl.h\u003e\n\nvoid get_fs_base(uint64_t *ret) {\n    register int       syscall_no  asm(\"rax\") = 158;\n    register int       arg1        asm(\"rdi\") = 0x1003;\n    register uint64_t *arg2        asm(\"rsi\") = ret;\n    asm(\"syscall\");\n}\n\nvoid _gdb_expr() {\n    char buf[BUFSIZ] = {'\\0'};\n    uint64_t addr = 0;\n    get_fs_base(\u0026addr);\n    int fd = open(\"fs_base.txt\", O_CREAT | O_APPEND | O_WRONLY, 0666);\n    write(fd, \u0026addr, BUFSIZ);\n    close(fd);\n}"
+        }
+    }
+}

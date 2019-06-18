@@ -1,3 +1,5 @@
+from enum import Enum
+
 # https://stackoverflow.com/a/11781721
 def gettype(name):
     from collections import deque

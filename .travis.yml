@@ -1,10 +1,17 @@
 language: python
 os: linux
+
+branches:
+  only:
+    - master
+
 python:
-  - "3.3"
+  - "3.4"
 before_install:
   - lscpu
 install:
+  - cd libc
+  - ./clone_and_build.sh
   - pip3 install ./lapidary
 before_script:
   - make -C test

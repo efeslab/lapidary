@@ -13,9 +13,9 @@ except ImportError:
     sys.path.append(str(Path(__file__).parent.parent.parent))
     from lapidary.utils import *
 
-from lapidary.Results import *
-from lapidary.config.SpecBench import *
 from lapidary.config import LapidaryConfig
+from lapidary.config.specbench.SpecBench import *
+from lapidary.report.Results import *
 
 WORK_DIR = os.path.dirname(__file__)
 if len( WORK_DIR ) == 0:
@@ -31,10 +31,11 @@ gem5_debug  = gem5_dir / 'build' / 'X86' / 'gem5.debug'
 gem5_script = Path(__file__).parent / 'se_run_experiment.py' #This script will call RunExperiment below
 pythonpath = ''
 
-def PrintFrameInfo( prefix, frameinfo ):
-    print( prefix + "%s:%s:%s" % (      os.path.abspath( frameinfo.filename ),
-                                        frameinfo.function,
-                                        frameinfo.lineno ))
+def PrintFrameInfo(prefix, frameinfo):
+    print("%s%s:%s:%s" % (  prefix, 
+                            os.path.abspath( frameinfo.filename ),
+                            frameinfo.function,
+                            frameinfo.lineno ))
 
 class ExitCause:
     SIMULATION_DONE  = "exiting with last active thread context"
@@ -42,7 +43,7 @@ class ExitCause:
     SIMULATE_LIMIT   = 'simulate() limit reached'
     VALID_STOP       = [SIMULATION_DONE, SIMULATE_LIMIT]
 
-def ToggleFlags( exit_cause, flags ):
+def ToggleFlags(exit_cause, flags):
     import m5
     if exit_cause == ExitCause.WORK_BEGIN:
         for flagName in flags:
@@ -315,7 +316,7 @@ def do_experiment(args):
     if args.bench is not None and args.binary is not None:
         raise Exception('Can only pick one!')
 
-    SpecBench.maybe_display_spec_info(args)
+    # SpecBench.maybe_display_spec_info(args)
     # CooldownConfig.maybe_show_configs(args)
 
     exp_bin = args.binary
@@ -334,7 +335,7 @@ def do_experiment(args):
 
 def main():
     parser = ArgumentParser(description=
-      'Run a standard gem5 configuration with a custom binary.')
+                    'Run a standard gem5 configuration with a custom binary.')
 
     SpecBench.add_parser_args(parser)
     add_experiment_args(parser)
@@ -367,7 +368,7 @@ def main():
     if args.bench is not None and args.binary is not None:
         raise Exception('Can only pick one!')
 
-    SpecBench.maybe_display_spec_info(args)
+    # SpecBench.maybe_display_spec_info(args)
     # CooldownConfig.maybe_show_configs(args)
 
     exp_bin = args.binary

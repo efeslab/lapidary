@@ -1,0 +1,9 @@
+gem5_path: ./custom_gem5
+gem5_features:
+  syscall_trace: true
+
+libc_path: ./libc/glibc/build/install
+
+spec2017_config:
+  spec2017_src_path: ./spec-cpu2017
+  workspace_path: ./workspace_lapidary_spec17

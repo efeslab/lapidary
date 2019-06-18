@@ -6,21 +6,10 @@ from multiprocessing import Process
 from pathlib import Path
 from pprint import pprint
 from subprocess import Popen, TimeoutExpired
-
-def join(self, timeout):
-    try:
-        self.wait(timeout)
-    except TimeoutExpired:
-        pass
-
-def is_alive(self):
-    return self.returncode is None
-
-Popen.join     = join
-Popen.is_alive = is_alive
-
-from tempfile import NamedTemporaryFile
 from time import sleep
+
+
+
 
 # WORK_DIR = os.path.dirname(__file__)
 # if len( WORK_DIR ) == 0:
@@ -28,11 +17,12 @@ from time import sleep
 # sys.path.append( WORK_DIR )
 
 try:
-    from lapidary.config.SpecBench import *
+    from lapidary.config.specbench.SpecBench import *
 except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).parent.parent.parent))
-    from lapidary.config.SpecBench import *
+    from lapidary.config.specbench.SpecBench import *
 
+import lapidary.pypatch
 from lapidary.checkpoint.Checkpoints import GDBCheckpoint
 from lapidary.checkpoint.CheckpointTemplate import *
 from lapidary.checkpoint import CheckpointConvert
@@ -368,12 +358,12 @@ class GDBEngine:
     def _try_create_checkpoint(self, debug_mode):
         self._poll_background_processes()
 
-
         if self._can_create_valid_checkpoint():
             print('Creating checkpoint #{}'.format(self.chk_num))
             self._create_gem5_checkpoint(debug_mode)
 
     def run_time(self, sec_between_chk, max_iter, debug_mode):
+        import gdb
         print('Running with {} seconds between checkpoints.'.format(
           sec_between_chk))
         self._run_base(debug_mode)

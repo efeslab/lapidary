@@ -1,0 +1,1 @@
+import lapidary.pypatch.SubprocessNaming

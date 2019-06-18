@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
 
+from lapidary.config import LapidaryConfig
+
 class ToolDecorator:
     def __init__(self, name):
         self.name = name
@@ -16,6 +18,8 @@ class LapidaryTools:
 
     def __init__(self, parser):
         self.parser = parser
+        # add some help arguments
+        LapidaryConfig.add_config_help_arguments(parser)
         # add parser args
         subparsers = self.parser.add_subparsers()
 
@@ -46,18 +50,14 @@ class LapidaryTools:
         from lapidary.simulate.ParallelSim import ParallelSim
         ParallelSim.add_args(parser)
 
-        return lambda args: ParallelSim.main()
+        return lambda args: ParallelSim.main(args)
 
     def __iter__(self):
         import inspect
         fns = inspect.getmembers(self, inspect.isfunction)
         for fname, fn in fns:
-            if not hasattr(fn, '__wrapped__') or not fn.__wrapped__:
-                print(fname)
-                from IPython import embed
-                embed()
-                continue
-            yield fn.command_name, fn
+            if hasattr(fn, '__wrapped__') and fn.__wrapped__:
+                yield fn.command_name, fn
 
     def parse_args(self):
         return self.parser.parse_args()

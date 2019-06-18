@@ -1,3 +1,3 @@
-# Lapidary: creating beautiful gem5 simulations.
+# Lapidary
 
-
+## Module descriptions

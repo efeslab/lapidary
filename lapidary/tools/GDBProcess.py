@@ -30,10 +30,10 @@ if len( WORK_DIR ) == 0:
 sys.path.append( WORK_DIR )
 
 try:
-    from lapidary.config.SpecBench import *
+    from lapidary.config.specbench.SpecBench import *
 except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).parent.parent.parent))
-    from lapidary.config.SpecBench import *
+    from lapidary.config.specbench.SpecBench import *
 
 from lapidary.checkpoint.Checkpoints import GDBCheckpoint
 from lapidary.checkpoint.CheckpointTemplate import *
@@ -97,7 +97,7 @@ def add_arguments(parser):
         help='Create a maximum number of checkpoints. -1 for unlimited')
     parser.add_argument('--debug-mode', default=False, action='store_true',
         help='For debugging program execution, run IPython after checkpointing.')
-    parser.add_argument('--directory', '-d', default='.',
+    parser.add_argument('--directory', '-d', default=None,
         help='The parent directory of the output checkpoint directories.')
 
     group = parser.add_mutually_exclusive_group()
@@ -138,22 +138,28 @@ def add_args(parser):
     SpecBench.add_parser_args(parser)
     add_arguments(parser)
 
-def main(args):
-    #parser = ArgumentParser('Create raw checkpoints of a process through GDB')
-    #LapidaryConfig.add_config_arguments(parser)
-    #SpecBench.add_parser_args(parser)
-    #add_arguments(parser)
-
-    #args = parser.parse_args()
-    config = LapidaryConfig.get_config(args)
-
+def modify_binary_ldd(config, old_bin):
     ld_path = None
     if 'libc_path' in config:
         ld_sos = glob.glob(f"{config['libc_path']}/lib/ld*.so")
-        assert len(ld_sos) == 1
+        assert ld_sos and len(ld_sos) == 1
         ld_path = ld_sos[0]
 
-    SpecBench.maybe_display_spec_info(args)
+    if ld_path is not None:
+        new_bin = Path(str(old_bin) + '.mod')
+        if not new_bin.exists():
+            shutil.copyfile(old_bin, new_bin)
+            shutil.copymode(old_bin, new_bin)
+            cmdstr = f'patchelf --set-interpreter {ld_path} {new_bin}'
+            subprocess.check_call(shlex.split(cmdstr))
+        
+        return str(new_bin)
+
+    return old_bin
+
+def main(args):
+
+    config = LapidaryConfig.get_config(args)
 
     if args.cmd and args.bench:
         raise Exception('Can only pick one!')
@@ -161,26 +167,18 @@ def main(args):
     arg_list = []
     gdbprocs = []
     if args.cmd:
-        if ld_path is not None:
-            bin_name = args.cmd[0]
-            new_bin  = bin_name + '.mod'
-            if not Path(new_bin).exists():
-                shutil.copyfile(bin_name, new_bin)
-                shutil.copymode(bin_name, new_bin)
-                cmdstr = f'patchelf --set-interpreter {ld_path} {new_bin}'
-                subprocess.check_call(shlex.split(cmdstr))
-            
-            args.cmd[0] = new_bin
+        args.cmd[0] = modify_binary_ldd(config, args.cmd[0])
 
         arg_list = args.cmd
         print(arg_list)
         print(config)
+        directory = args.directory if args.directory is not None else '.'
         gdbproc = GDBProcess(arg_list,
                              checkpoint_interval=args.interval,
                              checkpoint_instructions=args.stepi,
                              checkpoint_locations=args.breakpoints,
                              max_checkpoints=args.max_checkpoints,
-                             root_dir=args.directory,
+                             root_dir=directory,
                              compress=args.compress,
                              convert=not args.no_convert,
                              debug_mode=args.debug_mode)
@@ -189,15 +187,18 @@ def main(args):
         benchmarks = SpecBench.get_benchmarks(args)
         for benchmark in benchmarks:
             print('Setting up process for {}...'.format(benchmark))
-            bench = SpecBench().create(args.suite, benchmark, args.input_type)
-            arg_list = [str(bench.binary)] + bench.args
+            bench = SpecBench(config).create(
+                                        args.suite, benchmark, args.input_type)
+            mod_bin = modify_binary_ldd(config, str(bench.binary))
+            arg_list = [mod_bin] + bench.args
 
+            directory = args.directory if args.directory is not None else config['spec2017_config']['workspace_path']
             gdbproc = GDBProcess(arg_list,
                                  checkpoint_interval=args.interval,
                                  checkpoint_instructions=args.stepi,
                                  checkpoint_locations=args.breakpoints,
                                  max_checkpoints=args.max_checkpoints,
-                                 root_dir=args.directory,
+                                 root_dir=directory,
                                  compress=args.compress,
                                  convert=not args.no_convert,
                                  debug_mode=args.debug_mode)

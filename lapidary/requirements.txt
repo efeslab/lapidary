@@ -4,6 +4,6 @@ matplotlib
 natsort
 pandas
 pathlib
-pyelftools
 progressbar2
+pyelftools
 pyyaml
