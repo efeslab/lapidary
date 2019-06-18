@@ -1,0 +1,46 @@
+not any([
+
+# The sc_elab_and_sim mechanism is purposefully not supported.
+name == "sc_elab_and_sim",
+
+# The wif trace format is deprecated, and probably would take a non-trivial
+# amount of work to support.
+path.startswith("systemc/tracing/wif_trace"),
+path.startswith("systemc/misc/stars/wif_trace"),
+
+# Phase callbacks are an experimental feature. Also calling all the interested
+# sc_objects whenever time advances would add a non-trivial amount of
+# complexity and is probably not worth implementing in general.
+path.startswith("systemc/kernel/phase_callbacks/"),
+
+
+path in (
+    # Uses sc_elab_and_sim.
+    "systemc/kernel/sc_main_main",
+
+    # Tests the deprecated sc_string type which we aren't supporting.
+    "systemc/bugs/sc_string_bracket_assign",
+    "systemc/misc/stars/star124010",
+
+    # This test declares a constructor it never defines, so it's not clear how
+    # it would ever work?
+    "systemc/misc/stars/star104726",
+
+    # Another test which calls an undefined function.
+    "systemc/misc/gnats/pr-480",
+
+    # These tests rely on implicit FXVAL constructors based on primitive types,
+    # but enabling that makes other operator overloads ambiguous so things
+    # don't compile. It also seems dangerous to change what the headers look
+    # like between the backing implementation and the consuming application.
+    "systemc/datatypes/fx/fast_constructors",
+    "systemc/datatypes/fx/constructors",
+
+    # These tests uses sensitive_neg and sensitive_pos and overloads which are
+    # deprecated and not worth supporting. The non-deprecated version,
+    # sensitive, is exercised elsewhere.
+    "systemc/kernel/sc_sensitive/test02",
+    "systemc/kernel/sc_sensitive/test03",
+),
+
+])
