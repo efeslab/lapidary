@@ -8,23 +8,42 @@ SCHEMA = ''
 with SCHEMA_FILE.open('r') as f:
     SCHEMA = yaml.safe_load(f)
 
+class ConfigException(Exception):
+    pass
+
 class LapidaryConfig(dict):
 
-    def __init__(self, filename):
-        with Path(filename).open('r') as f:
-            self.fields = yaml.safe_load(f)
+    def __init__(self, filename=None, rawdata=None):
+        assert filename is not None or rawdata is not None
+        self.filename = None
 
+        if filename is not None:
+            self.filename = filename
+            with Path(filename).open('r') as f:
+                rawdata = f.read()
+            
+        self.fields = yaml.safe_load(rawdata)
+        if not self.fields:
+            raise ConfigException('Empty configuration was provided!')
+        self._parse_yaml_data()
+
+    def _parse_yaml_data(self):
         self.elements = {}
         for field in SCHEMA:
             required = SCHEMA[field]['required']
             ftype = SCHEMA[field]['type']
             if field not in self.fields and required:
-                raise Exception('Required field %s is not in %s!' % (field, filename))
+                raise ConfigException(f'Required field {field} is not in {filename}!')
             elif field in self.fields:
                 element = gettype(ftype)(self.fields[field])
                 if isinstance(element, Path):
-                    if not element.is_absolute():
-                        element = (Path(filename).parent / element).resolve()
+                    if not element.is_absolute() and self.filename is not None:
+                        raw_path = Path(self.filename).parent / element
+                        element = raw_path.resolve()
+                if isinstance(element, dict):
+                    options = SCHEMA[field]['valid_options']
+                    for option, typestr in options.items():
+                        element[option] = gettype(typestr)(element[option])
 
                 self.elements[field] = element
 

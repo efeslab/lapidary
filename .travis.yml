@@ -10,6 +10,8 @@ python:
 before_install:
   - lscpu
 install:
+  - cd libc
+  - ./clone_and_build.sh
   - pip3 install ./lapidary
 before_script:
   - make -C test

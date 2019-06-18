@@ -1,14 +1,14 @@
 #! /usr/bin/env python3
+from IPython import embed
 from argparse import ArgumentParser
 from collections import defaultdict
-from IPython import embed
-import itertools
-import json
 from enum import Enum
 from math import sqrt
-import pandas as pd
 from pathlib import Path
 from pprint import pprint
+import itertools
+import json
+import pandas as pd
 import re
 
 from lapidary.utils import *

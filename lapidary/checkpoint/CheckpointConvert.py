@@ -9,7 +9,6 @@ from multiprocessing import cpu_count, Pool, Lock, Process
 from pathlib import Path
 from pprint import pprint
 from progressbar import ProgressBar
-from tempfile import NamedTemporaryFile
 from time import sleep
 
 from lapidary.utils import *

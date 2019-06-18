@@ -1,3 +1,9 @@
+gem5_features:
+  required: false
+  type: dict
+  valid_options:
+    syscall_trace: bool
+
 gem5_path:
   required: true
   type: PosixPath

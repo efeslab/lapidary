@@ -6,21 +6,10 @@ from multiprocessing import Process
 from pathlib import Path
 from pprint import pprint
 from subprocess import Popen, TimeoutExpired
-
-def join(self, timeout):
-    try:
-        self.wait(timeout)
-    except TimeoutExpired:
-        pass
-
-def is_alive(self):
-    return self.returncode is None
-
-Popen.join     = join
-Popen.is_alive = is_alive
-
-from tempfile import NamedTemporaryFile
 from time import sleep
+
+
+
 
 # WORK_DIR = os.path.dirname(__file__)
 # if len( WORK_DIR ) == 0:
@@ -33,6 +22,7 @@ except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).parent.parent.parent))
     from lapidary.config.SpecBench import *
 
+import lapidary.pypatch
 from lapidary.checkpoint.Checkpoints import GDBCheckpoint
 from lapidary.checkpoint.CheckpointTemplate import *
 from lapidary.checkpoint import CheckpointConvert
