@@ -1,7 +1,15 @@
 language: python
+os: linux
 python:
   - "3.3"
+before_install:
+  - lscpu
 install:
   - pip3 install ./lapidary
+before_script:
+  - make -C test
+  - echo "checkpoint\nquit\nquit\n" > create_script.txt
 script:
-  - python3 -m lapidary
+  - python3 -m lapidary --help
+  - python3 -m lapidary create --cmd ./test/bin/test --breakpoints main -c ./test/lapidary.yaml < script.txt
+  - python3 -m lapidary simulate --start-checkpoint test.mod_gdb_checkpoints/0_check.cpt --binary ./test/bin/test.mod -c test/lapidary.yaml 
