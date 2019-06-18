@@ -1,7 +1,12 @@
 language: python
 os: linux
+
+branches:
+  only:
+    - master
+
 python:
-  - "3.3"
+  - "3.4"
 before_install:
   - lscpu
 install:
