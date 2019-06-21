@@ -138,3 +138,6 @@ script.txt
 gem5/stats.txt
 .noseids
 .vscode/tags
+lapidary-code.code-workspace
+.vscode/ipch/681ea811cfbf718c/get_fs_base.ipch
+.vscode/ipch/681ea811cfbf718c/mmap_address.bin
