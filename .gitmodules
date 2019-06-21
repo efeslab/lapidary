@@ -1,0 +1,3 @@
+[submodule "gistsnip"]
+	path = gistsnip
+	url = https://github.com/loov/gistsnip.git

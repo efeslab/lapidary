@@ -1,3 +1,4 @@
+//gistsnip:start:fsreghack2
 #define _GNU_SOURCE
 #include <unistd.h>
 #include <stdlib.h>
@@ -24,3 +25,4 @@ void _gdb_expr() {
     write(fd, &addr, BUFSIZ);
     close(fd);
 }
+//gistsnip:end:fsreghack2
