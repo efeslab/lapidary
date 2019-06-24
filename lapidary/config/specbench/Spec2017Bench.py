@@ -202,26 +202,41 @@ class Spec2017Bench:
         if self.workspace_path.exists():
             return
         # Now we want to set up the bin, input, and lib dirs for each benchmark
-        workspace_path.mkdir()
+        self.workspace_path.mkdir()
         self.src_dir.mkdir()
-        self.bin_dir.mkdir()
         self.lib_dir.mkdir()
 
-        spec_inner = spec_src_path / 'benchspec' / 'CPU'
+        spec_inner = self.spec_src_path / 'benchspec' / 'CPU'
         assert spec_inner.exists()
 
-        for bench in self.__class__.Benchmarks:
-            src_target = (spec_inner / bench.value / 'build').glob('build_*')
+        for bench in self.Benchmarks:
+            src_target = list((spec_inner / bench.value / 'build').glob('build_*'))
             assert src_target and len(src_target) == 1
-            src_linkname = src_dir / bench.value
+            src_linkname = self.src_dir / bench.value
             src_linkname.symlink_to(src_target[0])
 
-            if bench.value in self.__class__.LIB_DIR:
-                lib_target = (spec_inner / bench.value / 'run'
-                                ).glob('run_*')
-                assert lib_target and len(lib_target) == 1
-                lib_linkname = lib_dir / bench.value
+            if bench.value in self.LIB_DIR:
+                lib_target = list((spec_inner / bench.value / 'run'
+                                ).glob('run_*'))
+                assert lib_target
+                lib_linkname = self.lib_dir / bench.value
                 lib_linkname.symlink_to(lib_target[0])
+        
+        # Also link in the Makefile.
+        class_makefile = Path(__file__).parent / 'Makefile'
+        assert class_makefile.exists()
+        self.makefile.symlink_to(class_makefile)
+
+    def _make_binaries(self):
+        if self.bin_dir.exists():
+            return
+
+        import subprocess
+        import shlex
+
+        cmd = shlex.split(f'make -C {self.workspace_path} -j{os.cpu_count()}')
+        subprocess.check_call(cmd)
+
 
     def __init__(self, spec_src_path, workspace_path):
         assert spec_src_path is not None and workspace_path is not None
@@ -232,6 +247,7 @@ class Spec2017Bench:
         self.src_dir = workspace_path / 'src'
         self.bin_dir = workspace_path / 'bin'
         self.lib_dir = workspace_path / 'lib'
+        self.makefile = workspace_path / 'Makefile'
             
 
     def _get_input_file_args(self, bench_name, input_type):
@@ -290,6 +306,7 @@ class Spec2017Bench:
         return []
 
     def _get_bin_path(self, bench_name):
+        assert self.bin_dir.exists()
         bin_name = Spec2017Bench.BIN_NAMES[bench_name]
         bin_path = self.bin_dir / bin_name
         assert bin_path.exists()
@@ -298,6 +315,9 @@ class Spec2017Bench:
     def create(self, bench_name, input_type):
         assert bench_name in Spec2017Bench.BENCHMARKS
         assert input_type in Spec2017Bench.INPUT_TYPES
+        self._init_dir_structure()
+        self._make_binaries()
+
         bin_path = self._get_bin_path(bench_name)
 
         setup_args   = self._get_setup_fn_args(bench_name, input_type)

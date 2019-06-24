@@ -1,6 +1,6 @@
 .PHONY: all default clean install
 
-SRC17=src/spec2017
+SRC17=src/
 SPEC17_ROOT=$(abspath ../spec-cpu2017)
 SPEC17_BENCH=$(foreach b, $(wildcard $(SRC17)/*), $(shell basename $(b)))
 SPEC17_TARGETS=$(foreach b, $(SPEC17_BENCH), build-spec17-$(b))
@@ -31,9 +31,8 @@ build-spec17-$(1): build-setup
 		make TARGET=imagick_r SPEC=$(SPEC17_ROOT) -C $(SRC17)/$(1) || \
 		(make TARGET=x264_r SPEC=$(SPEC17_ROOT) -C $(SRC17)/$(1) && \
 		make TARGET=ldecod_r SPEC=$(SPEC17_ROOT) -C $(SRC17)/$(1))
-	@sync
-	cp -v \
-		$(shell find -L $(SRC17)/$(1) -type f -executable -exec file -F '' \
+	sync
+	cp -v $(shell find -L $(SRC17)/$(1) -type f -executable -exec file -F '' \
 		-i '{}' \; | grep 'charset=binary' | cut -f 1 -d ' ' | paste -sd ' ' -) bin/
 endef
 

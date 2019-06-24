@@ -46,6 +46,7 @@ class LapidaryConfig(dict):
             elements[field] = element
 
         return elements
+        
 
     def __init__(self, filename=None, rawdata=None):
         assert filename is not None or rawdata is not None

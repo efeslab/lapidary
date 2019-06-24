@@ -153,8 +153,6 @@ def main(args):
         assert len(ld_sos) == 1
         ld_path = ld_sos[0]
 
-    SpecBench.maybe_display_spec_info(args)
-
     if args.cmd and args.bench:
         raise Exception('Can only pick one!')
 
