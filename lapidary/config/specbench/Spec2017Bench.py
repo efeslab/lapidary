@@ -219,6 +219,7 @@ class Spec2017Bench:
         self.workspace_path.mkdir()
         self.src_dir.mkdir()
         self.lib_dir.mkdir()
+        self.input_dir.mkdir()
 
         spec_inner = self.spec_src_path / 'benchspec' / 'CPU'
         assert spec_inner.exists()
