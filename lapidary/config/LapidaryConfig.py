@@ -1,5 +1,6 @@
-import yaml
+from argparse import Action
 from pathlib import Path
+import yaml
 
 from lapidary.utils import gettype
 
@@ -11,7 +12,40 @@ with SCHEMA_FILE.open('r') as f:
 class ConfigException(Exception):
     pass
 
+class LapidaryConfigHelp(Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        kwargs['nargs'] = 0
+        super().__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(yaml.dump(SCHEMA))
+        exit(0)
+
 class LapidaryConfig(dict):
+
+    def _parse_yaml_data(self, schema, raw_config):
+        elements = {}
+        for field in schema:
+            required = schema[field]['required']
+            ftype = schema[field]['type']
+
+            if field not in raw_config and required:
+                raise ConfigException(f'Required field {field} is not in {filename}!')
+            elif field not in raw_config:
+                continue
+
+            element = gettype(ftype)(raw_config[field])
+            if isinstance(element, Path):
+                if not element.is_absolute() and self.filename is not None:
+                    raw_path = Path(self.filename).parent / element
+                    element = raw_path.resolve()
+            if isinstance(element, dict):
+                options = SCHEMA[field]['valid_options']
+                element = self._parse_yaml_data(options, element)
+
+            elements[field] = element
+
+        return elements
 
     def __init__(self, filename=None, rawdata=None):
         assert filename is not None or rawdata is not None
@@ -22,38 +56,21 @@ class LapidaryConfig(dict):
             with Path(filename).open('r') as f:
                 rawdata = f.read()
             
-        self.fields = yaml.safe_load(rawdata)
-        if not self.fields:
+        raw_config = yaml.safe_load(rawdata)
+        if not raw_config:
             raise ConfigException('Empty configuration was provided!')
-        self._parse_yaml_data()
 
-    def _parse_yaml_data(self):
-        self.elements = {}
-        for field in SCHEMA:
-            required = SCHEMA[field]['required']
-            ftype = SCHEMA[field]['type']
-            if field not in self.fields and required:
-                raise ConfigException(f'Required field {field} is not in {filename}!')
-            elif field in self.fields:
-                element = gettype(ftype)(self.fields[field])
-                if isinstance(element, Path):
-                    if not element.is_absolute() and self.filename is not None:
-                        raw_path = Path(self.filename).parent / element
-                        element = raw_path.resolve()
-                if isinstance(element, dict):
-                    options = SCHEMA[field]['valid_options']
-                    for option, typestr in options.items():
-                        element[option] = gettype(typestr)(element[option])
+        parsed_config = self._parse_yaml_data(SCHEMA, raw_config)
+        super().__init__(**parsed_config)
 
-                self.elements[field] = element
-
-        super().__init__(**self.elements)
 
     @staticmethod
     def add_config_arguments(parser):
-        parser.add_argument('--config', '-c', 
+        parser.add_argument('--config', '-c', default='.lapidary.yaml',
                             help=('Load simulation configurations from the '
                                   'specified YAML file.'))
+        parser.add_argument('--config-help', action=LapidaryConfigHelp,
+            help='Show help for construction the configuration file.')
 
     @classmethod
     def get_config(cls, args):
