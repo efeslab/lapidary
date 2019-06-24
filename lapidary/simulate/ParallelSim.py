@@ -1,6 +1,6 @@
 import lapidary.simulate.Experiment as Experiment
 import lapidary.utils
-from lapidary.config.SpecBench import *
+from lapidary.config.specbench.SpecBench import *
 
 import json
 import os

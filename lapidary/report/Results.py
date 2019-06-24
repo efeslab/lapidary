@@ -1,4 +1,3 @@
-#! /usr/bin/env python3
 from IPython import embed
 from argparse import ArgumentParser
 from collections import defaultdict
@@ -12,7 +11,7 @@ import pandas as pd
 import re
 
 from lapidary.utils import *
-from lapidary.config.SpecBench import *
+from lapidary.config.specbench.SpecBench import *
 #from lapidary.Graph import Grapher
 
 import pandas as pd

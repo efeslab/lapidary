@@ -190,18 +190,49 @@ class Spec2017Bench:
             '160', '59,796,407', '61,004,416', '6']
       }
 
-    def __init__(self, bin_dir, input_dir, lib_dir=Path('./lib')):
-        assert isinstance(bin_dir, Path)
-        assert isinstance(input_dir, Path)
-        assert isinstance(lib_dir, Path)
-        self.bin_dir   = bin_dir
-        self.input_dir = input_dir / 'spec2017'
-        self.lib_dir   = lib_dir / 'spec2017'
+    # def __init__(self, bin_dir, input_dir, lib_dir=Path('./lib')):
+    #     assert isinstance(bin_dir, Path)
+    #     assert isinstance(input_dir, Path)
+    #     assert isinstance(lib_dir, Path)
+    #     self.bin_dir   = bin_dir
+    #     self.input_dir = input_dir / 'spec2017'
+    #     self.lib_dir   = lib_dir / 'spec2017'
 
-    def __init__(self, root_dir):
-        assert isinstance(root_dir, Path)
+    def _init_dir_structure(self):
+        if self.workspace_path.exists():
+            return
         # Now we want to set up the bin, input, and lib dirs for each benchmark
-        
+        workspace_path.mkdir()
+        self.src_dir.mkdir()
+        self.bin_dir.mkdir()
+        self.lib_dir.mkdir()
+
+        spec_inner = spec_src_path / 'benchspec' / 'CPU'
+        assert spec_inner.exists()
+
+        for bench in self.__class__.Benchmarks:
+            src_target = (spec_inner / bench.value / 'build').glob('build_*')
+            assert src_target and len(src_target) == 1
+            src_linkname = src_dir / bench.value
+            src_linkname.symlink_to(src_target[0])
+
+            if bench.value in self.__class__.LIB_DIR:
+                lib_target = (spec_inner / bench.value / 'run'
+                                ).glob('run_*')
+                assert lib_target and len(lib_target) == 1
+                lib_linkname = lib_dir / bench.value
+                lib_linkname.symlink_to(lib_target[0])
+
+    def __init__(self, spec_src_path, workspace_path):
+        assert spec_src_path is not None and workspace_path is not None
+        assert isinstance(spec_src_path, Path) and spec_src_path.exists()
+
+        self.spec_src_path = spec_src_path
+        self.workspace_path = workspace_path
+        self.src_dir = workspace_path / 'src'
+        self.bin_dir = workspace_path / 'bin'
+        self.lib_dir = workspace_path / 'lib'
+            
 
     def _get_input_file_args(self, bench_name, input_type):
         if bench_name not in self.__class__.INPUT_FILES:

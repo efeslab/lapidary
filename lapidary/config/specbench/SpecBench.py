@@ -33,13 +33,21 @@ class SpecBench:
     SPEC2017 = 'spec2017'
     SUITES   = {SPEC2017: Spec2017Bench}
 
-    def __init__(self, bin_dir=Path('bin'), input_dir=Path('data')):
-        self.bin_dir = bin_dir
-        self.input_dir = input_dir
+    # def __init__(self, bin_dir=Path('bin'), input_dir=Path('data')):
+    #     self.bin_dir = bin_dir
+    #     self.input_dir = input_dir
+
+    def __init__(self, config):
+        assert 'spec2017_config' in config
+        self.spec_config = config['spec2017_config']
 
     def create(self, suite_name, bench_name, input_type):
+        print("Hello!")
         assert suite_name in SpecBench.SUITES
-        specsuite = SpecBench.SUITES[suite_name](self.bin_dir, self.input_dir)
+        spec_cls = SpecBench.SUITES[suite_name]
+        specsuite = spec_cls(self.spec_config['spec2017_src_path'], 
+                             self.spec_config['workspace_path'])
+        exit(0)
         return specsuite.create(bench_name, input_type)
 
     class ParseBenchmarkNames(Action):

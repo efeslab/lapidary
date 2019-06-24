@@ -13,9 +13,9 @@ except ImportError:
     sys.path.append(str(Path(__file__).parent.parent.parent))
     from lapidary.utils import *
 
-from lapidary.report.Results import *
-from lapidary.config.SpecBench import *
 from lapidary.config import LapidaryConfig
+from lapidary.config.specbench.SpecBench import *
+from lapidary.report.Results import *
 
 WORK_DIR = os.path.dirname(__file__)
 if len( WORK_DIR ) == 0:

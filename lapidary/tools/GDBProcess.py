@@ -189,7 +189,7 @@ def main(args):
         benchmarks = SpecBench.get_benchmarks(args)
         for benchmark in benchmarks:
             print('Setting up process for {}...'.format(benchmark))
-            bench = SpecBench().create(args.suite, benchmark, args.input_type)
+            bench = SpecBench(config).create(args.suite, benchmark, args.input_type)
             arg_list = [str(bench.binary)] + bench.args
 
             gdbproc = GDBProcess(arg_list,
