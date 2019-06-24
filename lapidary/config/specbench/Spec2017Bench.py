@@ -1,3 +1,5 @@
+from lapidary.config.specbench.Benchmark import Benchmark
+
 from enum import Enum
 from pathlib import Path
 import os
@@ -198,6 +200,18 @@ class Spec2017Bench:
     #     self.input_dir = input_dir / 'spec2017'
     #     self.lib_dir   = lib_dir / 'spec2017'
 
+    def _create_input_dir(self):
+        spec_inner = self.spec_src_path / 'benchspec' / 'CPU'
+        assert spec_inner.exists()
+        if not self.input_dir.exists():
+            self.input_dir.mkdir()
+
+        for bench in self.Benchmarks:
+            input_target = spec_inner / bench.value / 'data'
+            input_linkname = self.input_dir / bench.value
+            input_linkname.symlink_to(input_target)
+
+
     def _init_dir_structure(self):
         if self.workspace_path.exists():
             return
@@ -210,10 +224,16 @@ class Spec2017Bench:
         assert spec_inner.exists()
 
         for bench in self.Benchmarks:
+            # Sources
             src_target = list((spec_inner / bench.value / 'build').glob('build_*'))
             assert src_target and len(src_target) == 1
             src_linkname = self.src_dir / bench.value
             src_linkname.symlink_to(src_target[0])
+
+            # Inputs
+            input_target = spec_inner / bench.value / 'data'
+            input_linkname = self.input_dir / bench.value
+            input_linkname.symlink_to(input_target)
 
             if bench.value in self.LIB_DIR:
                 lib_target = list((spec_inner / bench.value / 'run'
@@ -247,6 +267,7 @@ class Spec2017Bench:
         self.src_dir = workspace_path / 'src'
         self.bin_dir = workspace_path / 'bin'
         self.lib_dir = workspace_path / 'lib'
+        self.input_dir = workspace_path / 'data'
         self.makefile = workspace_path / 'Makefile'
             
 
@@ -256,6 +277,9 @@ class Spec2017Bench:
         input_file_args = []
         input_file_names = self.__class__.INPUT_FILES[bench_name]
         parent_dir = self.input_dir / bench_name / input_type / 'input'
+
+        if not parent_dir.exists():
+            self._create_input_dir()
 
         for infile in input_file_names:
             input_path = parent_dir / infile
@@ -292,9 +316,9 @@ class Spec2017Bench:
         return ['-I', str(lib_dir_path)]
 
     def _get_misc_args(self, bench_name):
-        if bench_name not in self.__class__.MISC_ARGS:
+        if bench_name not in self.MISC_ARGS:
             return []
-        return self.__class__.MISC_ARGS[bench_name]
+        return self.MISC_ARGS[bench_name]
 
     def _get_setup_fn_args(self, bench_name, input_type):
         fn = lambda *_, **__: None

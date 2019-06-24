@@ -364,6 +364,7 @@ class GDBEngine:
             self._create_gem5_checkpoint(debug_mode)
 
     def run_time(self, sec_between_chk, max_iter, debug_mode):
+        import gdb
         print('Running with {} seconds between checkpoints.'.format(
           sec_between_chk))
         self._run_base(debug_mode)
