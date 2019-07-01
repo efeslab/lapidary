@@ -8,6 +8,8 @@ For more information about Lapidary and it's inception, please refer to our [blo
 
 ## Installation
 
+To install Lapidary:
+
 ```shell
 # Clone repository
 git clone https://github.com/efeslab/lapidary.git
@@ -18,7 +20,12 @@ source virt_env/bin/activate
 pip3 install ./lapidary
 ```
 
+**Note**: due to some [limitations](#limitations), it might be necessary to run 
+Lapidary in a VM with certain processor features disabled. See the [limitations section](#limitations) for details.
+
 ## Usage
+
+There are two steps when running Lapidary: (1) creating checkpoints and (2) simulating checkpoints.
 
 ### Configuration
 
