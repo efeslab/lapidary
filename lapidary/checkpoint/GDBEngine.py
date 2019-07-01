@@ -358,7 +358,6 @@ class GDBEngine:
     def _try_create_checkpoint(self, debug_mode):
         self._poll_background_processes()
 
-
         if self._can_create_valid_checkpoint():
             print('Creating checkpoint #{}'.format(self.chk_num))
             self._create_gem5_checkpoint(debug_mode)
