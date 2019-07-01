@@ -255,7 +255,8 @@ class Spec2017Bench:
         import subprocess
         import shlex
 
-        cmd = shlex.split(f'make -C {self.workspace_path} -j{os.cpu_count()}')
+        cmd = shlex.split(
+            'make -C {} -j{}'.format(self.workspace_path, os.cpu_count()))
         subprocess.check_call(cmd)
 
 

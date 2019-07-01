@@ -1,6 +1,10 @@
 # Lapidary: creating beautiful gem5 simulations.
 
-Please refer to 
+Lapidary is a tool we have built to enable more efficient [gem5][gem5] simulations.
+In short, Lapidary works by creating gem5 checkpoints on bare-metal to avoid the
+weeks of simulation required to create viable checkpoints. 
+
+For more information about Lapidary and it's inception, please refer to our [blog posts][blog].
 
 ## Installation
 
@@ -18,7 +22,8 @@ pip3 install ./lapidary
 
 ### Configuration
 
-All configurations must comply with the [configuration schema][schema-file].
+All configurations must comply with the [configuration schema][schema-file]. The file is assumed to be `./lapidary.yaml`, but can be specified explicitly by the
+`-c <PATH>` option available for all verbs.
 
 #### Examples
 
@@ -37,7 +42,8 @@ A full example configuration file is available in [our testing directory][exampl
 
 ### Checkpoint Creation
 
-The `create` verb is used to create checkpoints.
+The `create` verb is used to create checkpoints. This can either be done in 
+an automated fashion (every N seconds or every M instructions) or interactively through a shell interface.
 
 #### Examples
 
@@ -56,7 +62,25 @@ python3 -m lapidary create --cmd "..." --interval 1
 3. Create checkpoints for SPEC-CPU 2017 benchmarks (requires valid configuration path):
 
 ```shell
-python3 -m lapidary create --bench mcf --interval 5
+python3 -m lapidary create --bench mcf --interval 5 --directory /mnt/storage
+```
+
+4. Create checkpoints interactively:
+
+```shell
+python3 -m lapidary create --cmd "..." --breakpoints ...
+```
+
+At each breakpoint, the user will be allowed to interact with the gdb process.
+```
+User-defined breakpoint reached. Type "help" for help from this shell, or "gdb help" for traditional help from gdb.
+(py-gdb) help
+
+Documented commands (type help <topic>):
+========================================
+checkpoint  exit  gdb  help  quit
+
+(py-gdb) 
 ```
 
 ### Single Simulation
@@ -67,7 +91,29 @@ gem5 simulations.
 
 #### Examples
 
-1. 
+1. Simulate a single checkpoint from an arbitrary binary:
+
+```shell
+python3 -m lapidary simulate --start-checkpoint test_gdb_
+checkpoints/0_check.cpt --binary ./test/bin/test
+```
+
+2. Simulate a single checkpoint from an arbitrary command (with arguments):
+
+```shell
+python3 -m lapidary simulate --start-checkpoint test_gdb_
+checkpoints/0_check.cpt --binary ./test/bin/test --args ... 
+```
+
+3. Debug gem5 on a particular checkpoint:
+
+```shell
+python3 -m lapidary simulate --start-checkpoint test_gdb_
+checkpoints/0_check.cpt --binary ./test/bin/test --args ... --debug-mode
+```
+
+`--debug-mode` will not only use `gem5.debug` instead of `gem5.opt`, but it will
+also runs gem5 through gdb.
 
 ### Parallel Simulation
 
@@ -79,7 +125,7 @@ single benchmark at once.
 1. Simulate all checkpoints taken from the MCF benchmark:
 
 ```shell
-
+python3 -m lapidary parallel-simulate --bench mcf --checkpoint-dir /mnt/storage
 ```
 
 ## Current Limitations
@@ -119,5 +165,10 @@ will catch many.
 
 ## Contributing
 
+Fork, post issues, make pull requests, whatever floats your boat! We appreciate 
+any and all feedback.
+
 [example-config]: test/lapidary.yaml
 [schema-file]: config/schema.yaml
+[gem5]: http://gem5.org/Main_Page
+[blog]: https://medium.com/@iangneal/lapidary-crafting-more-beautiful-gem5-simulations-4bc6f6aad717

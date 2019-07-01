@@ -65,12 +65,12 @@ from common.cpu2000 import *
 
 def add_benchmark_args(parser):
     try:
-        from lapidary.CooldownConfig import CooldownConfig
+        from lapidary.config.Gem5FlagConfig import Gem5FlagConfig
     except ImportError:
         from pathlib import Path
         sys.path.append(str(Path(__file__).parent.parent.parent))
-        from lapidary.CooldownConfig import CooldownConfig
-    CooldownConfig.add_optparse_args(parser)
+        from lapidary.config.Gem5FlagConfig import Gem5FlagConfig
+    Gem5FlagConfig.add_optparse_args(parser)
 
     parser.add_option('--reportable-insts', dest='reportable_insts',
         help='The number of instructions we want to report statistics on (after warmup)',

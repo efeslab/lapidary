@@ -36,7 +36,8 @@ class SpecBench:
         def __call__(self, parser, namespace, values, option_string):
             for suite in SpecBench.SUITES:
                 num_bench = len(SpecBench.SUITES[suite].BENCHMARKS)
-                print(f'SPEC CPU suite {suite} has {num_bench} benchmarks:')
+                print('SPEC CPU suite {} has {} benchmarks:'.format(
+                    suite, num_bench))
                 pprint(SpecBench.SUITES[suite].BENCHMARKS)
             exit(0)
 

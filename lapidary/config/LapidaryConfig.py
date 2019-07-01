@@ -30,7 +30,8 @@ class LapidaryConfig(dict):
             ftype = schema[field]['type']
 
             if field not in raw_config and required:
-                raise ConfigException(f'Required field {field} is not in {filename}!')
+                raise ConfigException('Required field {} is not in {}!'.format(
+                    field, filename))
             elif field not in raw_config:
                 continue
 

@@ -13,6 +13,9 @@ class FlagConfigure:
 
 class Gem5FlagConfig:
 
+    class Empty(FlagConfigure):
+        pass
+
     # Maps group name to list of classes
     GROUPS = {
             'Empty': [Empty]
