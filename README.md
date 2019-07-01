@@ -108,8 +108,7 @@ checkpoints/0_check.cpt --binary ./test/bin/test
 2. Simulate a single checkpoint from an arbitrary command (with arguments):
 
 ```shell
-python3 -m lapidary simulate --start-checkpoint test_gdb_
-checkpoints/0_check.cpt --binary ./test/bin/test --args ... 
+python3 -m lapidary simulate --start-checkpoint test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test --args ... 
 ```
 
 3. Debug gem5 on a particular checkpoint:
@@ -135,6 +134,8 @@ single benchmark at once.
 python3 -m lapidary parallel-simulate --binary ./test/bin/test --args ... 
 ```
 
+    This will look for checkpoints within `./test_gdb_checkpoints/` (e.g. `./test_gdb_checkpoints/0_check.cpt`, `./test_gdb_checkpoints/1_check.cpt`, etc.).
+
 2. Simulate all checkpoints taken from the MCF benchmark with a non-standard
 checkpoint directory:
 
@@ -158,32 +159,38 @@ specify which extensions to disable via the `-cpu` flag in QEMU, e.g.
 ... -cpu host,-avx2,-bmi1,-bmi2 ...
 ```
 
-Even this workaround 
+2. Not all checkpoints run successfully. For example, checkpoints that attempt
+to invoke syscalls generally end up crashing.
 
-2. As we generate a lot of checkpoints for our sampling methodology, Lapidary 
+3. As we generate a lot of checkpoints for our sampling methodology, Lapidary 
 quickly occupies a lot of disk space (a few hundred GB is not uncommon). 
 
-3. Our sampling method does not support simulation over custom instructions. 
+4. Our sampling method does not support simulation over custom instructions. 
 In other words, our sampling method only works when simulating existing ISAs
 (which can be run on bare metal) with potentially different back-end implementations.
 
 ## Future Work
 
-1. Add support for checkpoint "key-frames", i.e. storing small numbers of full 
+1. We are currently working on a feature for syscall tracing, i.e. replaying the 
+call trace from the checkpointing process upon resuming simulation in gem5. This 
+will solve many of the issues that currently cause some checkpoints to fail.
+
+2. Add support for checkpoint "key-frames", i.e. storing small numbers of full 
 checkpoints, then creating diffs from those for following checkpoints. This
 feature will need to be configurable, as it will increase the processing required
 for simulation startup.
 
-2. Add support for custom instructions. This can be presented in several modes; either skip custom instructions during checkpoint creation, or emulate them at a high level when encountered. This will not catch all use cases, but I imagine it
+3. Add support for custom instructions. This can be presented in several modes; either skip custom instructions during checkpoint creation, or emulate them at a high level when encountered. This will not catch all use cases, but I imagine it
 will catch many.
 
-3. Add support for cloud deployments, i.e. distributed simulation, potentially
+4. Add support for cloud deployments, i.e. distributed simulation, potentially
 using ansible to automate provisioning/setup as well.
 
 ## Contributing
 
 Fork, post issues, make pull requests, whatever floats your boat! We appreciate 
 any and all feedback.
+
 
 [example-config]: test/lapidary.yaml
 [schema-file]: config/schema.yaml
