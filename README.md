@@ -1,8 +1,13 @@
 # Lapidary: creating beautiful gem5 simulations.
 
-Lapidary is a tool we have built to enable more efficient [gem5][gem5] simulations.
-In short, Lapidary works by creating gem5 checkpoints on bare-metal to avoid the
-weeks of simulation required to create viable checkpoints. 
+Lapidary is a tool we have built to enable more efficient [gem5][gem5] simulations. 
+
+Lapidary works by creating gem5 checkpoints on bare-metal to avoid the
+weeks of simulation required to create viable checkpoints. This is done by taking 
+core dumps of the program through gdb (along with gathering some other miscellanous process state information) and transforming the output into a gem5-compatible 
+checkpoint. Lapidary can then perform short simulations over many checkpoints
+(in accordance with the [SMARTS sampling methodology][smarts]) in order to 
+product statistically significant performance measurements.
 
 For more information about Lapidary and its inception, please refer to our [blog post][blog].
 
@@ -128,13 +133,13 @@ single benchmark at once.
 
 #### Examples
 
-1. Simulate all checkpoints taken from an arbitrary command:
+1. Simulate all checkpoints taken from an arbitrary command (This will look for checkpoints within `./test_gdb_checkpoints/`, e.g. `./test_gdb_checkpoints/0_check.cpt`, `./test_gdb_checkpoints/1_check.cpt`, etc.):
 
 ```shell
 python3 -m lapidary parallel-simulate --binary ./test/bin/test --args ... 
 ```
 
-    This will look for checkpoints within `./test_gdb_checkpoints/` (e.g. `./test_gdb_checkpoints/0_check.cpt`, `./test_gdb_checkpoints/1_check.cpt`, etc.).
+
 
 2. Simulate all checkpoints taken from the MCF benchmark with a non-standard
 checkpoint directory:
@@ -196,3 +201,4 @@ any and all feedback.
 [schema-file]: config/schema.yaml
 [gem5]: http://gem5.org/Main_Page
 [blog]: https://medium.com/@iangneal/lapidary-crafting-more-beautiful-gem5-simulations-4bc6f6aad717
+[smarts]: https://dl.acm.org/citation.cfm?id=859629
