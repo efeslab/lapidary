@@ -316,7 +316,7 @@ def do_experiment(args):
     if args.bench is not None and args.binary is not None:
         raise Exception('Can only pick one!')
 
-    SpecBench.maybe_display_spec_info(args)
+    # SpecBench.maybe_display_spec_info(args)
     # CooldownConfig.maybe_show_configs(args)
 
     exp_bin = args.binary
@@ -368,7 +368,7 @@ def main():
     if args.bench is not None and args.binary is not None:
         raise Exception('Can only pick one!')
 
-    SpecBench.maybe_display_spec_info(args)
+    # SpecBench.maybe_display_spec_info(args)
     # CooldownConfig.maybe_show_configs(args)
 
     exp_bin = args.binary

@@ -73,6 +73,11 @@ class LapidaryConfig(dict):
         parser.add_argument('--config-help', action=LapidaryConfigHelp,
             help='Show help for construction the configuration file.')
 
+    @staticmethod
+    def add_config_help_arguments(parser):
+        parser.add_argument('--config-help', action=LapidaryConfigHelp,
+            help='Show help for construction the configuration file.')
+
     @classmethod
     def get_config(cls, args):
         return cls(args.config)

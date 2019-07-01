@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
 
+from lapidary.config import LapidaryConfig
+
 class ToolDecorator:
     def __init__(self, name):
         self.name = name
@@ -16,6 +18,8 @@ class LapidaryTools:
 
     def __init__(self, parser):
         self.parser = parser
+        # add some help arguments
+        LapidaryConfig.add_config_help_arguments(parser)
         # add parser args
         subparsers = self.parser.add_subparsers()
 
