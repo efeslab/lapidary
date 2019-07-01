@@ -151,12 +151,14 @@ and use those implementations. This causes a problem for some checkpoints, as
 they end up attempting to use AVX instructions in gem5, causing a crash since 
 gem5 does not recognize these instructions. 
 
-Our temporary workaround was to run our experiments in a VM, as it is easy to 
+    Our temporary workaround was to run our experiments in a VM, as it is easy to 
 specify which extensions to disable via the `-cpu` flag in QEMU, e.g.
 
 ```bash
 ... -cpu host,-avx2,-bmi1,-bmi2 ...
 ```
+
+Even this workaround 
 
 2. As we generate a lot of checkpoints for our sampling methodology, Lapidary 
 quickly occupies a lot of disk space (a few hundred GB is not uncommon). 
