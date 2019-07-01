@@ -4,7 +4,7 @@ Lapidary is a tool we have built to enable more efficient [gem5][gem5] simulatio
 In short, Lapidary works by creating gem5 checkpoints on bare-metal to avoid the
 weeks of simulation required to create viable checkpoints. 
 
-For more information about Lapidary and it's inception, please refer to our [blog posts][blog].
+For more information about Lapidary and its inception, please refer to our [blog post][blog].
 
 ## Installation
 
@@ -20,8 +20,8 @@ source virt_env/bin/activate
 pip3 install ./lapidary
 ```
 
-**Note**: due to some [limitations](#limitations), it might be necessary to run 
-Lapidary in a VM with certain processor features disabled. See the [limitations section](#limitations) for details.
+**Note**: due to some [limitations](#current-limitations), it might be necessary to run 
+Lapidary in a VM with certain processor features disabled. See the [limitations section](#current-limitations) for details.
 
 ## Usage
 
@@ -66,7 +66,7 @@ python3 -m lapidary create --help
 python3 -m lapidary create --cmd "..." --interval 1
 ```
 
-3. Create checkpoints for SPEC-CPU 2017 benchmarks (requires valid configuration path):
+3. Create checkpoints for SPEC-CPU 2017 benchmarks (requires valid configuration path) and save them to `/mnt/storage` rather than the current working directory:
 
 ```shell
 python3 -m lapidary create --bench mcf --interval 5 --directory /mnt/storage
@@ -129,7 +129,14 @@ single benchmark at once.
 
 #### Examples
 
-1. Simulate all checkpoints taken from the MCF benchmark:
+1. Simulate all checkpoints taken from an arbitrary command:
+
+```shell
+python3 -m lapidary parallel-simulate --binary ./test/bin/test --args ... 
+```
+
+2. Simulate all checkpoints taken from the MCF benchmark with a non-standard
+checkpoint directory:
 
 ```shell
 python3 -m lapidary parallel-simulate --bench mcf --checkpoint-dir /mnt/storage
@@ -137,15 +144,15 @@ python3 -m lapidary parallel-simulate --bench mcf --checkpoint-dir /mnt/storage
 
 ## Current Limitations
 
-1. Currently, gem5 does not support all Intel ISA extentions (such as AVX). Gem5 
+1. Currently, gem5 does not support all Intel ISA extensions (such as AVX). Gem5 
 is able to disable use of these instructions by libc when it loads programs, 
-however glibc seems to dynamically check which extentions are available at runtime
+however glibc seems to dynamically check which extensions are available at runtime
 and use those implementations. This causes a problem for some checkpoints, as 
 they end up attempting to use AVX instructions in gem5, causing a crash since 
 gem5 does not recognize these instructions. 
 
 Our temporary workaround was to run our experiments in a VM, as it is easy to 
-specify which extentions to disable via the `-cpu` flag in QEMU, e.g.
+specify which extensions to disable via the `-cpu` flag in QEMU, e.g.
 
 ```bash
 ... -cpu host,-avx2,-bmi1,-bmi2 ...
@@ -156,11 +163,11 @@ quickly occupies a lot of disk space (a few hundred GB is not uncommon).
 
 3. Our sampling method does not support simulation over custom instructions. 
 In other words, our sampling method only works when simulating existing ISAs
-(which can be run on bare metal) with potentially different backend implementations.
+(which can be run on bare metal) with potentially different back-end implementations.
 
 ## Future Work
 
-1. Add support for checkpoint "keyframes", i.e. storing small numbers of full 
+1. Add support for checkpoint "key-frames", i.e. storing small numbers of full 
 checkpoints, then creating diffs from those for following checkpoints. This
 feature will need to be configurable, as it will increase the processing required
 for simulation startup.
@@ -168,7 +175,8 @@ for simulation startup.
 2. Add support for custom instructions. This can be presented in several modes; either skip custom instructions during checkpoint creation, or emulate them at a high level when encountered. This will not catch all use cases, but I imagine it
 will catch many.
 
-3. Add support for cloud deployments, i.e. distributed simulation.
+3. Add support for cloud deployments, i.e. distributed simulation, potentially
+using ansible to automate provisioning/setup as well.
 
 ## Contributing
 
