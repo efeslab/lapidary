@@ -1,30 +1,31 @@
 from __future__ import print_function
+
+from IPython import embed
 from argparse import ArgumentParser
 from collections import defaultdict
-import copy
-from IPython import embed
-import itertools
-import json
-import enum
 from enum import Enum
 from math import sqrt, ceil, isnan
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.patheffects as PathEffects
 from matplotlib.font_manager import FontProperties
-from matplotlib.patches import Patch
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
-import matplotlib.ticker as ticker
+from matplotlib.patches import Patch
 from pathlib import Path
 from pprint import pprint
-import re
+import copy
+import enum
+import itertools
+import json
+import matplotlib.patheffects as PathEffects
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
+import pandas as pd
+import re
 import yaml
 
-import Utils
-from SpecBench import *
+import lapidary.utils as Utils
+from lapidary.config.specbench import *
 
-import pandas as p7
+import pandas as pd
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
 #pd.set_option('display.max_rows', None)
 
