@@ -45,7 +45,9 @@ All configurations must comply with the [configuration schema][schema-file]. The
 python3 -m lapidary --config-help
 ```
 
-2. A basic configuration (all you need to run basic):
+2. A basic configuration (all you need to run basic simulations):
+
+`./lapidary.yaml`:
 ```yaml
 gem5_path: path/to/gem5/relative/to/config/file/location
 ```
@@ -98,29 +100,30 @@ checkpoint  exit  gdb  help  quit
 ### Single Simulation
 
 The `simulate` verb is used to simulate a single checkpoint that was previously
-created from the `create` command. This command is more useful for debugging
-gem5 simulations.
+created from the `create` command. This command is useful for debugging issues with custom modifications to the gem5 simulator.
 
 #### Examples
 
 1. Simulate a single checkpoint from an arbitrary binary:
 
 ```shell
-python3 -m lapidary simulate --start-checkpoint test_gdb_
-checkpoints/0_check.cpt --binary ./test/bin/test
+python3 -m lapidary simulate --start-checkpoint \
+    test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test
 ```
 
 2. Simulate a single checkpoint from an arbitrary command (with arguments):
 
 ```shell
-python3 -m lapidary simulate --start-checkpoint test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test --args ... 
+python3 -m lapidary simulate --start-checkpoint \
+    test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test --args ... 
 ```
 
 3. Debug gem5 on a particular checkpoint:
 
 ```shell
-python3 -m lapidary simulate --start-checkpoint test_gdb_
-checkpoints/0_check.cpt --binary ./test/bin/test --args ... --debug-mode
+python3 -m lapidary simulate --start-checkpoint \
+    test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test --args ... \
+    --debug-mode
 ```
 
 `--debug-mode` will not only use `gem5.debug` instead of `gem5.opt`, but it will
@@ -129,16 +132,21 @@ also runs gem5 through gdb.
 ### Parallel Simulation
 
 The `parallel-simulate` verb is used to simulate a group of checkpoints from a 
-single benchmark at once.
+single benchmark at once. This can be used to generate statistical performance
+measurements using the [SMARTS methology][smarts]. 
+
+This works by simulating each checkpoint for a small number of instructions in two different periods; there is a warmup period (default 5,000,000 instructions) which allows the caches to be filled, and a real simulation period (by default 100,000 instructions) which generates the reported statistics. For more details on the theory behind this sampling methodology, please refer to the [ISCA publication][smarts].
 
 #### Examples
 
-1. Simulate all checkpoints taken from an arbitrary command (This will look for checkpoints within `./test_gdb_checkpoints/`, e.g. `./test_gdb_checkpoints/0_check.cpt`, `./test_gdb_checkpoints/1_check.cpt`, etc.):
+1. Simulate all checkpoints taken from an arbitrary command (This will look for 
+checkpoints within `./test_gdb_checkpoints/`, e.g. 
+`./test_gdb_checkpoints/0_check.cpt`, `./test_gdb_checkpoints/1_check.cpt`, 
+etc.):
 
 ```shell
 python3 -m lapidary parallel-simulate --binary ./test/bin/test --args ... 
 ```
-
 
 
 2. Simulate all checkpoints taken from the MCF benchmark with a non-standard
@@ -147,6 +155,68 @@ checkpoint directory:
 ```shell
 python3 -m lapidary parallel-simulate --bench mcf --checkpoint-dir /mnt/storage
 ```
+
+### Reporting
+
+The `report` verb is used to aggregate the results from multiple simulations
+into a single report file and display them in a variety of ways. The first 
+step is always to generate the aggregated report (via the `report process`
+facility), then the data can be further processed into more digestable formats.
+
+Currently we have two sub-commands:
+- `report process`, to create the aggregated report.
+- `report filter`, to create a more terse, easily readable report.
+
+We plan on adding a built-in graphing facility (`report graph`) soon.
+
+#### Examples
+
+1. Create a report after simulating checkpoints in `/mnt/storage`:
+
+```shell
+python3 -m lapidary report process -d /mnt/storage
+```
+
+The output is in `./report.json`, which looks like:
+
+```json
+{
+    "results": {
+        "benchmark_name": {
+            "configuration_1": {
+                "sim_insts": {
+                    "mean": 103165.07692307692,
+                    "std": 2507.9945546971453,
+                    "ci": 1363.3613701898664,
+                    "count": 13.0
+                },
+                ...
+```
+
+- `count` is the number of checkpoints used to generate the statistic.
+- `mean` is the arithmetic mean across the checkpoints.
+- `std` is the standard deviation, and `ci` is the 95% confidence interval.
+
+2. Create a summary report that contains only the `cpi` (cycles per instruction)
+ and `MLP` (memory-level parallelism) statistic.
+
+ ```shell
+ python3 -m lapidary report filter cpi -o cpi_only.yaml -i report.json
+ ```
+
+ This reads the report from `report.json` and writes the output into `cpi_only.yaml`.
+ The output type can be either `yaml` or `json` (use `report filter --help` 
+ for details).
+
+ `cpi_only.yaml`:
+ ```yaml
+ benchmark_1:
+  configuration_1:
+    cpi: 0.98
+  configuration_2:
+    cpi: 1.1
+  ...
+ ```
 
 ## Current Limitations
 
@@ -185,16 +255,18 @@ checkpoints, then creating diffs from those for following checkpoints. This
 feature will need to be configurable, as it will increase the processing required
 for simulation startup.
 
-3. Add support for custom instructions. This can be presented in several modes; either skip custom instructions during checkpoint creation, or emulate them at a high level when encountered. This will not catch all use cases, but I imagine it
-will catch many.
+3. Add support for custom instructions. This can be presented in several modes; 
+either skip custom instructions during checkpoint creation, or emulate them at 
+a high level when encountered. This will not catch all use cases, but I imagine 
+it will catch many.
 
 4. Add support for cloud deployments, i.e. distributed simulation, potentially
 using ansible to automate provisioning/setup as well.
 
 ## Contributing
 
-Fork, post issues, make pull requests, whatever floats your boat! We appreciate 
-any and all feedback.
+Please feel free to create forks, post issues, make pull requests, or email us directly! We appreciate 
+any and all feedback and would like to make this tool as useful as possible.
 
 
 [example-config]: test/lapidary.yaml

@@ -52,6 +52,15 @@ class LapidaryTools:
 
         return lambda args: ParallelSim.main(args)
 
+    @staticmethod
+    @ToolDecorator("report")
+    def add_report_args(parser):
+        from lapidary.report.Report import Report
+        Report.add_args(parser)
+
+        return lambda args: Report.main(args)
+
+
     def __iter__(self):
         import inspect
         fns = inspect.getmembers(self, inspect.isfunction)

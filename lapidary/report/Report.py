@@ -1,28 +1,26 @@
-#! /usr/bin/env python3
+from IPython import embed
 from argparse import ArgumentParser
 from collections import defaultdict
-from IPython import embed
-import itertools
-import json
 from enum import Enum
 from math import sqrt
-import pandas as pd
-import numpy as np
 from pathlib import Path
 from pprint import pprint
+import itertools
+import json
+import numpy as np
+import pandas as pd
 import re
+import yaml
 
-import Utils
-from SpecBench import *
-from Graph import Grapher
-from NDAGrapher import NDAGrapher
-from NDADataObject import NDADataObject
+import lapidary.utils as Utils
+from lapidary.config.specbench.SpecBench import *
+from lapidary.report.graph.Graph import Grapher
 
 import pandas as pd
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
 #pd.set_option('display.max_rows', None)
 
-from Results import *
+from lapidary.report.Results import *
 
 class Report:
     ''' Aggregrate Results into a unified document. '''
@@ -207,58 +205,94 @@ class Report:
         with open(self.outfile, 'w') as f:
             json.dump(report, f, indent=4)
 
+    @staticmethod
+    def filter_fn(args):
+        def in_filter(stat):
+            for f in args.filters:
+                if f in stat:
+                    return True
+            return False
 
-################################################################################
+        with Path(args.input_file).open() as f:
+            report = json.load(f)
 
-def add_args(parser):
-    subparsers = parser.add_subparsers()
-    # For data aggregation!
-    process = subparsers.add_parser('process',
-                                    help='Aggregate all simulation results')
+            filtered = {}
 
-    process_fn = lambda args: Report(args).process_results()
-    process.add_argument('--simresult-dir', '-d', default='simulation_results',
-                         help='Where the res.json files reside.')
-    process.add_argument('--output-file', '-o', default='report.json',
-                         help='Where to output the report')
-    process.add_argument('--verbatim', '-v', default=False, action='store_true',
-                         help='Output all stats, not just relevant stats.')
-    process.add_argument('--include-all', '-i', default=False, action='store_true',
-                         help='Include all results, not just across matching subsets of checkpoints')
-    process.set_defaults(fn=process_fn)
+            for bench, bench_data in report['results'].items():
+                filtered[bench] = {}
+                for config, config_data in bench_data.items():
+                    filtered[bench][config] = {}
+                    for stat, stat_data in config_data.items():
+                        if in_filter(stat):
+                            filtered[bench][config][stat] = round(stat_data['mean'], 2)
+
+            output_file = args.output_file
+            if output_file is None:
+                output_file = ' '.join(args.filters) + '.yaml'
+
+            with Path(output_file).open('w') as fd:
+                if args.format == 'yaml':
+                    yaml.dump(filtered, fd, default_flow_style=False)
+                elif args.format == 'json':
+                    json.dump(filtered, fd, indent=4)
+                else:
+                    raise Exception(f'Cannot interpret file type "{args.format}".')
+
+    @classmethod
+    def add_args(cls, parser):
+        subparsers = parser.add_subparsers()
+        # For data aggregation!
+        process = subparsers.add_parser('process',
+                                        help='Aggregate all simulation results')
+
+        process_fn = lambda args: Report(args).process_results()
+        process.add_argument('--simresult-dir', '-d', default='simulation_results',
+                            help='Where the res.json files reside.')
+        process.add_argument('--output-file', '-o', default='report.json',
+                            help='Where to output the report')
+        process.add_argument('--verbatim', '-v', default=False, action='store_true',
+                            help='Output all stats, not just relevant stats.')
+        process.add_argument('--include-all', '-i', default=False, action='store_true',
+                            help='Include all results, not just across matching subsets of checkpoints')
+        process.set_defaults(fn=process_fn)
+
+        # For data filtering!
+        filter_cmd = subparsers.add_parser('filter',
+                                           help='Filter the aggregated report')
+        filter_cmd.add_argument('--input-file', '-i', default='./report.json',
+                                help='Location of the report file.')
+        filter_cmd.add_argument('--output-file', '-o', nargs='?', default=None,
+                                help='Output file name. Defaults to <stats>.yaml')
+        filter_cmd.add_argument('--format', '-f', default='yaml',
+                                help='Format of the output file. Default is YAML.')
+        filter_cmd.add_argument('filters', nargs='+',
+                                help='Stat filters. Includes all stats which partially match any single string specified.')
+        filter_cmd.set_defaults(fn=cls.filter_fn)
 
 
-    # For summaries!
-    summary_fn = lambda args: Grapher(args).output_text(
-                            NDADataObject(args.input_file).data_by_benchmark())
-    summary = subparsers.add_parser('summary',
-                                    help='Display relavant results')
-    summary.add_argument('--input-file', '-i', default='report.json',
-                         help='Where the aggregations live')
-    summary.add_argument('--output-dir', '-d', default='.',
-                         help='Where to output the report')
-    summary.add_argument('--config', '-c', default='graph_config.yaml',
-                         help='What file to use for this dataset.')
-    summary.set_defaults(fn=summary_fn)
+        # For summaries!
+        # summary_fn = lambda args: Grapher(args).output_text(
+        #                         NDADataObject(args.input_file).data_by_benchmark())
+        # summary = subparsers.add_parser('summary',
+        #                                 help='Display relavant results')
+        # summary.add_argument('--input-file', '-i', default='report.json',
+        #                     help='Where the aggregations live')
+        # summary.add_argument('--output-dir', '-d', default='.',
+        #                     help='Where to output the report')
+        # summary.add_argument('--config', '-c', default='graph_config.yaml',
+        #                     help='What file to use for this dataset.')
+        # summary.set_defaults(fn=summary_fn)
 
-    # For graphing!
-    graph = subparsers.add_parser('graph',
-                                  help='Graph from report.json')
-    NDAGrapher.add_parser_args_graph(graph)
+        # # For graphing!
+        # graph = subparsers.add_parser('graph',
+        #                             help='Graph from report.json')
+        # NDAGrapher.add_parser_args_graph(graph)
 
-    # For the paper!
-    results = subparsers.add_parser('results',
-                                  help='Output results from report.json')
-    NDAGrapher.add_parser_args_text(results)
+        # # For the paper!
+        # results = subparsers.add_parser('results',
+        #                             help='Output results from report.json')
+        # NDAGrapher.add_parser_args_text(results)
 
-################################################################################
-
-def main():
-    parser = ArgumentParser(description='Aggregate results from parallel simulation.')
-    add_args(parser)
-
-    args = parser.parse_args()
-    args.fn(args)
-
-if __name__ == '__main__':
-    exit(main())
+    @staticmethod
+    def main(args):
+        args.fn(args)
