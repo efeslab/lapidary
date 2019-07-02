@@ -45,7 +45,9 @@ All configurations must comply with the [configuration schema][schema-file]. The
 python3 -m lapidary --config-help
 ```
 
-2. A basic configuration (all you need to run basic):
+2. A basic configuration (all you need to run basic simulations):
+
+`./lapidary.yaml`:
 ```yaml
 gem5_path: path/to/gem5/relative/to/config/file/location
 ```
@@ -98,29 +100,30 @@ checkpoint  exit  gdb  help  quit
 ### Single Simulation
 
 The `simulate` verb is used to simulate a single checkpoint that was previously
-created from the `create` command. This command is more useful for debugging
-gem5 simulations.
+created from the `create` command. This command is useful for debugging issues with custom modifications to the gem5 simulator.
 
 #### Examples
 
 1. Simulate a single checkpoint from an arbitrary binary:
 
 ```shell
-python3 -m lapidary simulate --start-checkpoint test_gdb_
-checkpoints/0_check.cpt --binary ./test/bin/test
+python3 -m lapidary simulate --start-checkpoint \
+    test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test
 ```
 
 2. Simulate a single checkpoint from an arbitrary command (with arguments):
 
 ```shell
-python3 -m lapidary simulate --start-checkpoint test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test --args ... 
+python3 -m lapidary simulate --start-checkpoint \
+    test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test --args ... 
 ```
 
 3. Debug gem5 on a particular checkpoint:
 
 ```shell
-python3 -m lapidary simulate --start-checkpoint test_gdb_
-checkpoints/0_check.cpt --binary ./test/bin/test --args ... --debug-mode
+python3 -m lapidary simulate --start-checkpoint \
+    test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test --args ... \
+    --debug-mode
 ```
 
 `--debug-mode` will not only use `gem5.debug` instead of `gem5.opt`, but it will
@@ -130,7 +133,9 @@ also runs gem5 through gdb.
 
 The `parallel-simulate` verb is used to simulate a group of checkpoints from a 
 single benchmark at once. This can be used to generate statistical performance
-measurements using the [SMARTS methology][smarts].
+measurements using the [SMARTS methology][smarts]. 
+
+This works by simulating each checkpoint for a small number of instructions in two different periods; there is a warmup period (default 5,000,000 instructions) which allows the caches to be filled, and a real simulation period (by default 100,000 instructions) which generates the reported statistics. For more details on the theory behind this sampling methodology, please refer to the [ISCA publication][smarts].
 
 #### Examples
 
@@ -260,8 +265,8 @@ using ansible to automate provisioning/setup as well.
 
 ## Contributing
 
-Fork, post issues, make pull requests, whatever floats your boat! We appreciate 
-any and all feedback.
+Please feel free to create forks, post issues, make pull requests, or email us directly! We appreciate 
+any and all feedback and would like to make this tool as useful as possible.
 
 
 [example-config]: test/lapidary.yaml
