@@ -18,8 +18,7 @@ class LapidaryTools:
 
     def __init__(self, parser):
         self.parser = parser
-        # add some help arguments
-        LapidaryConfig.add_config_help_arguments(parser)
+        LapidaryConfig.add_config_arguments(parser)
         # add parser args
         subparsers = self.parser.add_subparsers()
 

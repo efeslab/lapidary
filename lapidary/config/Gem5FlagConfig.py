@@ -37,10 +37,12 @@ class Gem5FlagConfig:
         import inspect
 
         classes = [p[1] for p in inspect.getmembers(module) if inspect.isclass(p[1])]
-        subs = [c for c in classes if issubclass(c, FlagConfigure)]
+        subs = [c for c in classes if issubclass(c, FlagConfigure) and c != FlagConfigure]
 
         if not subs:
             raise ConfigException(f'Module {module} did not contain any FlagConfigure classes!')
+
+        cls.GROUPS[module.__name__] = subs
 
         for s in subs:
             cls.CONFIGS[s.__name__] = s
@@ -82,27 +84,6 @@ class Gem5FlagConfig:
         after_warmup_fn = config_methods['after_warmup'].__func__
         return before_init_fn, after_warmup_fn
 
-    @classmethod
-    def get_config_group_names(cls, group_name):
-        group_name = group_name.upper()
-        for group, classes in cls.GROUPS.items():
-            if group_name in group:
-                for config_class in classes:
-                    yield config_class.__name__
-
-    @classmethod
-    def maybe_show_configs(cls, args):
-        do_exit = False
-        if args.list_configs:
-            do_exit = True
-            pprint([k for k in cls._get_config_classes().keys()])
-        if args.list_groups:
-            do_exit = True
-            pprint([k for k in cls._get_config_groups().keys()])
-
-        if do_exit:
-            exit()
-    
     # Parser arguments
     @classmethod
     def _get_help_class(cls):
@@ -121,12 +102,16 @@ class Gem5FlagConfig:
                 super().__init__(option_strings, dest, **kwargs)
 
             def __call__(self, parser, namespace, values, option_string=None):
-                import IPython
-                IPython.embed()
+                config = LapidaryConfig.get_config(namespace)
+                cls.parse_plugins(config)
+
                 if self.do_configs:
                     pprint([k for k in cls._get_config_classes().keys()])
                 if self.do_groups:
-                    pprint([k for k in cls._get_config_groups().keys()])
+                    for g, m in cls._get_config_groups().items():
+                        print(f'{g}:')
+                        pprint([c.__name__ for c in m])
+                        print()
                 exit(0)
         
         return Gem5FlagConfigHelp
@@ -134,10 +119,10 @@ class Gem5FlagConfig:
 
     @classmethod
     def add_parser_args(cls, parser):
-        parser.add_argument('--cooldown-config', default='empty',
-            help='Enable Cooldown with a specific variant')
-        parser.add_argument('--config-group', default=None,
-            help='Run a specific group of configs (plus in order and OOO')
+        parser.add_argument('--flag-config', default='empty',
+            help='Use a debug flag configuration setting')
+        parser.add_argument('--flag-config-group', default=None,
+            help='Run a specific group of configs (plus in order and OOO)')
         parser.add_argument('--list-configs', action=cls._get_help_class(),
             help='Show available configs')
         parser.add_argument('--list-groups', action=cls._get_help_class(),
@@ -145,5 +130,5 @@ class Gem5FlagConfig:
 
     @staticmethod
     def add_optparse_args(parser):
-        parser.add_option('--cooldown-config', default='empty',
-            help='Enable Cooldown with a specific variant')
+        parser.add_option('--flag-config', default='empty',
+            help='Use a debug flag configuration setting')

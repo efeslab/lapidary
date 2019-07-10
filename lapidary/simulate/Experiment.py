@@ -297,7 +297,6 @@ def add_experiment_args(parser):
     parser.add_argument('--syscalls-hook', action='store_true',
                         default=False, help='Use strace log to replace syscalls')
 
-    LapidaryConfig.add_config_arguments(parser)
     Gem5FlagConfig.add_parser_args(parser)
     SpecBench.add_parser_args(parser)
 

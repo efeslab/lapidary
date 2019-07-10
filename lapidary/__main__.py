@@ -3,7 +3,7 @@ from lapidary.tools import LapidaryTools
 from argparse import ArgumentParser
 
 def main():
-    parser = ArgumentParser()
+    parser = ArgumentParser(prog='lapidary')
     tools = LapidaryTools(parser)
 
     args = tools.parse_args()
