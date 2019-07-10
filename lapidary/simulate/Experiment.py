@@ -71,8 +71,11 @@ def RunExperiment( options, root, system, FutureClass ):
     exit_cause = None
     system.exit_on_work_items = True
 
-    # before_init_config, after_warmup_config = CooldownConfig.get_config(
-    #     options.cooldown_config)
+    config = LapidaryConfig.get_config(options)
+    Gem5FlagConfig.parse_plugins(config)
+
+    before_init_config, after_warmup_config = Gem5FlagConfig.get_config(
+        options.flag_config)
 
     checkpoint_in = Path('.')
     if options.checkpoint is not None:
@@ -98,13 +101,13 @@ def RunExperiment( options, root, system, FutureClass ):
     runType = RunType.OUT_OF_ORDER
     if options.cpu_type == 'TimingSimpleCPU':
         runType = RunType.IN_ORDER
-    if options.cooldown_config != 'empty':
+    if options.flag_config != 'empty':
         runType = RunType.COOLDOWN
 
     resobj = Results(runType, Path(options.cmd).name, stats_file,
-        options.cooldown_config)
+        options.flag_config)
 
-    # before_init_config(system)
+    before_init_config(system)
 
     cpu = system.cpu[0]
 
@@ -138,7 +141,7 @@ def RunExperiment( options, root, system, FutureClass ):
                 return
 
         resobj.get_warmup_stats()
-        # after_warmup_config()
+        after_warmup_config()
 
         realInstructionsDone = 0
         limit = max(int(real * 0.05 * 500), 1000 * 500)
@@ -220,6 +223,7 @@ def run_binary_on_gem5(bin_path, bin_args, parsed_args):
     extra_args = [# '--help',
         '--warmup-insts', str(parsed_args.warmup_insts),
         '--reportable-insts', str(parsed_args.reportable_insts),
+        '--config', str(parsed_args.config.filename)
     ]
 
     if parsed_args.syscalls_hook:
@@ -236,8 +240,8 @@ def run_binary_on_gem5(bin_path, bin_args, parsed_args):
     else:
         extra_args += [ '--mem-size', str(parsed_args.mem_size) ]
 
-    if hasattr(parsed_args, 'cooldown_config') and parsed_args.cooldown_config:
-        debug_args += [ '--cooldown-config', parsed_args.cooldown_config ]
+    if hasattr(parsed_args, 'flag_config') and parsed_args.flag_config:
+        debug_args += [ '--flag-config', parsed_args.flag_config ]
     if parsed_args.output_dir is not None:
         extra_args += [ '--outdir', str(parsed_args.output_dir) ]
 
@@ -302,13 +306,12 @@ def add_experiment_args(parser):
 
 def do_experiment(args):
     
-    config = LapidaryConfig.get_config(args)
     global gem5_dir
     global gem5_opt
     global gem5_debug
     global pythonpath
 
-    gem5_dir    = config['gem5_path']
+    gem5_dir    = args.config['gem5_path']
     gem5_opt    = gem5_dir / 'build' / 'X86' / 'gem5.opt'
     gem5_debug  = gem5_dir / 'build' / 'X86' / 'gem5.debug'
     pythonpath  = gem5_dir / 'configs'
@@ -316,8 +319,6 @@ def do_experiment(args):
     if args.bench is not None and args.binary is not None:
         raise Exception('Can only pick one!')
 
-    # SpecBench.maybe_display_spec_info(args)
-    # CooldownConfig.maybe_show_configs(args)
 
     exp_bin = args.binary
     exp_args = args.args

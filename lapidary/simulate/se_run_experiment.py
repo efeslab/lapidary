@@ -81,6 +81,7 @@ def add_benchmark_args(parser):
                         help='Where to output stuff like stats')
     parser.add_option('--syscalls-hook', action='store_true',
                         default=False, help='Use strace log to replace syscalls')
+    parser.add_option('--config', help='What Lapidary config to use')
 
 
 def get_processes(options):

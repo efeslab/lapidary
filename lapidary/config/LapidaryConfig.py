@@ -4,6 +4,8 @@ import yaml
 
 from lapidary.utils import gettype
 
+from lapidary.config.Gem5FlagConfig import Gem5FlagConfig
+
 SCHEMA_FILE = Path(__file__).parent / 'schema.yaml'
 SCHEMA = ''
 with SCHEMA_FILE.open('r') as f:
@@ -20,6 +22,16 @@ class LapidaryConfigHelp(Action):
     def __call__(self, parser, namespace, values, option_string=None):
         print(yaml.dump(SCHEMA))
         exit(0)
+
+class LapidaryConfigHandler(Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        super().__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        filename = getattr(namespace, self.dest)
+        config = self.type(filename=filename)
+        setattr(namespace, self.dest, config)
+        Gem5FlagConfig.parse_plugins(config)
 
 class LapidaryConfig(dict):
 
@@ -63,12 +75,16 @@ class LapidaryConfig(dict):
             raise ConfigException('Empty configuration was provided!')
 
         parsed_config = self._parse_yaml_data(SCHEMA, raw_config)
-        super().__init__(**parsed_config)
+        print(parsed_config)
+        try:
+            super().__init__(**parsed_config)
+        except:
+            super(type(self), self).__init__(**parsed_config)
 
-
-    @staticmethod
-    def add_config_arguments(parser):
+    @classmethod
+    def add_config_arguments(cls, parser):
         parser.add_argument('--config', '-c', default='.lapidary.yaml',
+                            action=LapidaryConfigHandler, type=cls,
                             help=('Load simulation configurations from the '
                                   'specified YAML file.'))
         parser.add_argument('--config-help', action=LapidaryConfigHelp,
@@ -81,4 +97,8 @@ class LapidaryConfig(dict):
 
     @classmethod
     def get_config(cls, args):
+        if not hasattr(args, 'config'):
+            from pprint import pprint
+            pprint(args)
+        
         return cls(args.config)

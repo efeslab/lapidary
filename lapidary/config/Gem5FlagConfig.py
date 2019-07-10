@@ -2,8 +2,6 @@ from argparse import ArgumentParser, Action
 from inspect import isclass
 from pprint import pprint
 
-from lapidary.config.LapidaryConfig import LapidaryConfig, ConfigException
-
 from lapidary.config.FlagConfigure import FlagConfigure, EmptyConfig
 
 class Gem5FlagConfig:
@@ -19,19 +17,22 @@ class Gem5FlagConfig:
 
     @classmethod
     def parse_plugins(cls, config):
-        assert isinstance(config, LapidaryConfig)
-
         if 'gem5_flag_config_plugin' not in config:
             return
-
-        from importlib.util import spec_from_file_location, module_from_spec
 
         module_path = config['gem5_flag_config_plugin']
         module_name = module_path.name.split('.')[0]
 
-        spec = spec_from_file_location(module_name, module_path)
-        module = module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = None
+
+        try:
+            from importlib.util import spec_from_file_location, module_from_spec
+            spec = spec_from_file_location(module_name, module_path)
+            module = module_from_spec(spec)
+            spec.loader.exec_module(module)
+        except:
+            import imp
+            module = imp.load_source(module_name, str(module_path))
 
         # Now, extract all the classes
         import inspect
@@ -40,7 +41,7 @@ class Gem5FlagConfig:
         subs = [c for c in classes if issubclass(c, FlagConfigure) and c != FlagConfigure]
 
         if not subs:
-            raise ConfigException(f'Module {module} did not contain any FlagConfigure classes!')
+            raise Exception('Module {} did not contain any FlagConfigure classes!'.format(module))
 
         cls.GROUPS[module.__name__] = subs
 
@@ -76,12 +77,14 @@ class Gem5FlagConfig:
             raise Exception('{} not a valid config. Valid configs: {}'.format(
               config_name, ', '.join(config_classes.keys())))
 
-        config_class = config_classes[config_name]
-        config_methods = { k: v for k, v in
-            config_class.__dict__.items() if isinstance(v, staticmethod)}
+        from inspect import isfunction
 
-        before_init_fn = config_methods['before_init'].__func__
-        after_warmup_fn = config_methods['after_warmup'].__func__
+        config_class = config_classes[config_name]
+        config_methods = { x: getattr(config_class, x) for x in dir(config_class) 
+            if isfunction(getattr(config_class, x))}
+
+        before_init_fn = config_methods['before_init']
+        after_warmup_fn = config_methods['after_warmup']
         return before_init_fn, after_warmup_fn
 
     # Parser arguments
@@ -102,14 +105,11 @@ class Gem5FlagConfig:
                 super().__init__(option_strings, dest, **kwargs)
 
             def __call__(self, parser, namespace, values, option_string=None):
-                config = LapidaryConfig.get_config(namespace)
-                cls.parse_plugins(config)
-
                 if self.do_configs:
                     pprint([k for k in cls._get_config_classes().keys()])
                 if self.do_groups:
                     for g, m in cls._get_config_groups().items():
-                        print(f'{g}:')
+                        print('{}:'.format(g))
                         pprint([c.__name__ for c in m])
                         print()
                 exit(0)
