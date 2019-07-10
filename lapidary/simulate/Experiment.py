@@ -13,7 +13,7 @@ except ImportError:
     sys.path.append(str(Path(__file__).parent.parent.parent))
     from lapidary.utils import *
 
-from lapidary.config import LapidaryConfig
+from lapidary.config import LapidaryConfig, Gem5FlagConfig
 from lapidary.config.specbench.SpecBench import *
 from lapidary.report.Results import *
 
@@ -298,6 +298,7 @@ def add_experiment_args(parser):
                         default=False, help='Use strace log to replace syscalls')
 
     LapidaryConfig.add_config_arguments(parser)
+    Gem5FlagConfig.add_parser_args(parser)
     SpecBench.add_parser_args(parser)
 
 def do_experiment(args):

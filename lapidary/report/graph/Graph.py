@@ -5,7 +5,6 @@ from argparse import ArgumentParser
 from collections import defaultdict
 from enum import Enum
 from math import sqrt, ceil, isnan
-from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.patches import Patch
 from pathlib import Path
@@ -256,7 +255,8 @@ class Grapher:
 
                     opt = kwargs['per_tick_label'][tick_label]
 
-                    if 'font' in opt:
+                    if 'font' in opt:        
+                        from matplotlib.font_manager import FontProperties  
                         tick.label.set_fontproperties(FontProperties(**opt['font']))
 
                     if self._kwargs_bool(opt, 'line_before'):

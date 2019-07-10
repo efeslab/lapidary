@@ -1,36 +1,54 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Action
 from inspect import isclass
 from pprint import pprint
 
-class FlagConfigure:
-    @staticmethod
-    def before_init(system):
-        pass
-        
-    @staticmethod
-    def after_warmup():
-        pass
+from lapidary.config.LapidaryConfig import LapidaryConfig, ConfigException
+
+from lapidary.config.FlagConfigure import FlagConfigure, EmptyConfig
 
 class Gem5FlagConfig:
 
-    class Empty(FlagConfigure):
-        pass
+    CONFIGS = {
+        'Empty': EmptyConfig,
+    }
 
     # Maps group name to list of classes
     GROUPS = {
-            'Empty': [Empty]
+        'Empty': [EmptyConfig]
     }
 
     @classmethod
-    def add_class_to_group(cls, config_class, group_name):
-        assert isinstance(config_class, FlagConfigure)
-        if group_name not in cls.GROUPS:
-            cls.GROUPS[group_name] = []
-        cls.GROUPS[group_name] += [config_class]
+    def parse_plugins(cls, config):
+        assert isinstance(config, LapidaryConfig)
+
+        if 'gem5_flag_config_plugin' not in config:
+            return
+
+        from importlib.util import spec_from_file_location, module_from_spec
+
+        module_path = config['gem5_flag_config_plugin']
+        module_name = module_path.name.split('.')[0]
+
+        spec = spec_from_file_location(module_name, module_path)
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        # Now, extract all the classes
+        import inspect
+
+        classes = [p[1] for p in inspect.getmembers(module) if inspect.isclass(p[1])]
+        subs = [c for c in classes if issubclass(c, FlagConfigure)]
+
+        if not subs:
+            raise ConfigException(f'Module {module} did not contain any FlagConfigure classes!')
+
+        for s in subs:
+            cls.CONFIGS[s.__name__] = s
+            cls.GROUPS[s.__name__] = [s]
 
     @classmethod
     def _get_config_classes(cls):
-        return { k.lower(): v for k, v in cls.__dict__.items() if isclass(v) }
+        return { k.lower(): v for k, v in cls.CONFIGS.items() }
 
     @classmethod
     def _get_config_groups(cls):
@@ -86,16 +104,43 @@ class Gem5FlagConfig:
             exit()
     
     # Parser arguments
+    @classmethod
+    def _get_help_class(cls):
+        class Gem5FlagConfigHelp(Action):
+            def __init__(self, option_strings, dest, **kwargs):
+                kwargs['nargs'] = 0
+                assert len(option_strings) == 1
+                self.do_configs = False
+                self.do_groups = False
+                if 'configs' in option_strings[0]:
+                    self.do_configs = True
+                elif 'groups' in option_strings[0]:
+                    self.do_groups = True
+                else:
+                    raise Exception('Invalid use of help command!')
+                super().__init__(option_strings, dest, **kwargs)
 
-    @staticmethod
-    def add_parser_args(parser):
+            def __call__(self, parser, namespace, values, option_string=None):
+                import IPython
+                IPython.embed()
+                if self.do_configs:
+                    pprint([k for k in cls._get_config_classes().keys()])
+                if self.do_groups:
+                    pprint([k for k in cls._get_config_groups().keys()])
+                exit(0)
+        
+        return Gem5FlagConfigHelp
+
+
+    @classmethod
+    def add_parser_args(cls, parser):
         parser.add_argument('--cooldown-config', default='empty',
             help='Enable Cooldown with a specific variant')
         parser.add_argument('--config-group', default=None,
             help='Run a specific group of configs (plus in order and OOO')
-        parser.add_argument('--list-configs', action='store_true', default=False,
+        parser.add_argument('--list-configs', action=cls._get_help_class(),
             help='Show available configs')
-        parser.add_argument('--list-groups', action='store_true', default=False,
+        parser.add_argument('--list-groups', action=cls._get_help_class(),
             help='Show available groups')
 
     @staticmethod
