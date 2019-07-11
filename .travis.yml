@@ -11,7 +11,7 @@ before_install:
   - lscpu
 install:
   - cd libc
-  - ./clone_and_build.sh
+  - ./clone_and_build.sh > /dev/null 2>&1
   - pip3 install ./lapidary
 before_script:
   - make -C test

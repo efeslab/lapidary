@@ -13,7 +13,7 @@ except ImportError:
     sys.path.append(str(Path(__file__).parent.parent.parent))
     from lapidary.utils import *
 
-from lapidary.config import LapidaryConfig
+from lapidary.config import LapidaryConfig, Gem5FlagConfig
 from lapidary.config.specbench.SpecBench import *
 from lapidary.report.Results import *
 
@@ -71,8 +71,11 @@ def RunExperiment( options, root, system, FutureClass ):
     exit_cause = None
     system.exit_on_work_items = True
 
-    # before_init_config, after_warmup_config = CooldownConfig.get_config(
-    #     options.cooldown_config)
+    config = LapidaryConfig.get_config(options)
+    Gem5FlagConfig.parse_plugins(config)
+
+    before_init_config, after_warmup_config = Gem5FlagConfig.get_config(
+        options.flag_config)
 
     checkpoint_in = Path('.')
     if options.checkpoint is not None:
@@ -98,13 +101,13 @@ def RunExperiment( options, root, system, FutureClass ):
     runType = RunType.OUT_OF_ORDER
     if options.cpu_type == 'TimingSimpleCPU':
         runType = RunType.IN_ORDER
-    if options.cooldown_config != 'empty':
+    if options.flag_config != 'empty':
         runType = RunType.COOLDOWN
 
     resobj = Results(runType, Path(options.cmd).name, stats_file,
-        options.cooldown_config)
+        options.flag_config)
 
-    # before_init_config(system)
+    before_init_config(system)
 
     cpu = system.cpu[0]
 
@@ -138,7 +141,7 @@ def RunExperiment( options, root, system, FutureClass ):
                 return
 
         resobj.get_warmup_stats()
-        # after_warmup_config()
+        after_warmup_config()
 
         realInstructionsDone = 0
         limit = max(int(real * 0.05 * 500), 1000 * 500)
@@ -220,6 +223,7 @@ def run_binary_on_gem5(bin_path, bin_args, parsed_args):
     extra_args = [# '--help',
         '--warmup-insts', str(parsed_args.warmup_insts),
         '--reportable-insts', str(parsed_args.reportable_insts),
+        '--config', str(parsed_args.config.filename)
     ]
 
     if parsed_args.syscalls_hook:
@@ -236,8 +240,8 @@ def run_binary_on_gem5(bin_path, bin_args, parsed_args):
     else:
         extra_args += [ '--mem-size', str(parsed_args.mem_size) ]
 
-    if hasattr(parsed_args, 'cooldown_config') and parsed_args.cooldown_config:
-        debug_args += [ '--cooldown-config', parsed_args.cooldown_config ]
+    if hasattr(parsed_args, 'flag_config') and parsed_args.flag_config:
+        debug_args += [ '--flag-config', parsed_args.flag_config ]
     if parsed_args.output_dir is not None:
         extra_args += [ '--outdir', str(parsed_args.output_dir) ]
 
@@ -297,18 +301,17 @@ def add_experiment_args(parser):
     parser.add_argument('--syscalls-hook', action='store_true',
                         default=False, help='Use strace log to replace syscalls')
 
-    LapidaryConfig.add_config_arguments(parser)
+    Gem5FlagConfig.add_parser_args(parser)
     SpecBench.add_parser_args(parser)
 
 def do_experiment(args):
     
-    config = LapidaryConfig.get_config(args)
     global gem5_dir
     global gem5_opt
     global gem5_debug
     global pythonpath
 
-    gem5_dir    = config['gem5_path']
+    gem5_dir    = args.config['gem5_path']
     gem5_opt    = gem5_dir / 'build' / 'X86' / 'gem5.opt'
     gem5_debug  = gem5_dir / 'build' / 'X86' / 'gem5.debug'
     pythonpath  = gem5_dir / 'configs'
@@ -316,8 +319,6 @@ def do_experiment(args):
     if args.bench is not None and args.binary is not None:
         raise Exception('Can only pick one!')
 
-    # SpecBench.maybe_display_spec_info(args)
-    # CooldownConfig.maybe_show_configs(args)
 
     exp_bin = args.binary
     exp_args = args.args
@@ -332,59 +333,3 @@ def do_experiment(args):
         exp_args = bench.args
 
     return run_binary_on_gem5(Path(exp_bin), exp_args, args)
-
-def main():
-    parser = ArgumentParser(description=
-                    'Run a standard gem5 configuration with a custom binary.')
-
-    SpecBench.add_parser_args(parser)
-    add_experiment_args(parser)
-    # CooldownConfig.add_parser_args(parser)
-    LapidaryConfig.add_config_arguments(parser)
-
-    parser.add_argument('--start-checkpoint',
-                        default=None, help=('Checkpoint to start simulating from.'
-                        'If not given, starts from program beginning'))
-
-    parser.add_argument('--binary', help='compiled binary file path')
-    parser.add_argument('--args',
-                        help='Arguments to supply to simulated executable',
-                        default='', nargs='+')
-    parser.add_argument('--syscalls-hook', action='store_true',
-                        default=False, help='Use strace log to replace syscalls')
-
-    args = parser.parse_args()
-    config = LapidaryConfig.get_config(args)
-    global gem5_dir
-    global gem5_opt
-    global gem5_debug
-    global pythonpath
-
-    gem5_dir    = config['gem5_path']
-    gem5_opt    = gem5_dir / 'build' / 'X86' / 'gem5.opt'
-    gem5_debug  = gem5_dir / 'build' / 'X86' / 'gem5.debug'
-    pythonpath  = gem5_dir / 'configs'
-
-    if args.bench is not None and args.binary is not None:
-        raise Exception('Can only pick one!')
-
-    # SpecBench.maybe_display_spec_info(args)
-    # CooldownConfig.maybe_show_configs(args)
-
-    exp_bin = args.binary
-    exp_args = args.args
-    if args.bench:
-        benchmarks = SpecBench.get_benchmarks(args)
-        if len(benchmarks) != 1:
-            raise Exception('Experiment.py only supports a single task!')
-        benchmark = benchmarks[0]
-
-        bench = SpecBench().create(args.suite, benchmark, args.input_type)
-        exp_bin = bench.binary
-        exp_args = bench.args
-
-    return run_binary_on_gem5(Path(exp_bin), exp_args, args)
-
-
-if __name__ == '__main__':
-    exit(main())

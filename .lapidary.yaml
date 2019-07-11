@@ -4,6 +4,8 @@ gem5_features:
 
 libc_path: ./libc/glibc/build/install
 
+gem5_flag_config_plugin: ./test/test_configurations.py
+
 spec2017_config:
   spec2017_src_path: ./spec-cpu2017
   workspace_path: ./workspace_lapidary_spec17

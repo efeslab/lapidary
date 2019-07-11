@@ -1,36 +1,57 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Action
 from inspect import isclass
 from pprint import pprint
 
-class FlagConfigure:
-    @staticmethod
-    def before_init(system):
-        pass
-        
-    @staticmethod
-    def after_warmup():
-        pass
+from lapidary.config.FlagConfigure import FlagConfigure, EmptyConfig
 
 class Gem5FlagConfig:
 
-    class Empty(FlagConfigure):
-        pass
+    CONFIGS = {
+        'Empty': EmptyConfig,
+    }
 
     # Maps group name to list of classes
     GROUPS = {
-            'Empty': [Empty]
+        'Empty': [EmptyConfig]
     }
 
     @classmethod
-    def add_class_to_group(cls, config_class, group_name):
-        assert isinstance(config_class, FlagConfigure)
-        if group_name not in cls.GROUPS:
-            cls.GROUPS[group_name] = []
-        cls.GROUPS[group_name] += [config_class]
+    def parse_plugins(cls, config):
+        if 'gem5_flag_config_plugin' not in config:
+            return
+
+        module_path = config['gem5_flag_config_plugin']
+        module_name = module_path.name.split('.')[0]
+
+        module = None
+
+        try:
+            from importlib.util import spec_from_file_location, module_from_spec
+            spec = spec_from_file_location(module_name, module_path)
+            module = module_from_spec(spec)
+            spec.loader.exec_module(module)
+        except:
+            import imp
+            module = imp.load_source(module_name, str(module_path))
+
+        # Now, extract all the classes
+        import inspect
+
+        classes = [p[1] for p in inspect.getmembers(module) if inspect.isclass(p[1])]
+        subs = [c for c in classes if issubclass(c, FlagConfigure) and c != FlagConfigure]
+
+        if not subs:
+            raise Exception('Module {} did not contain any FlagConfigure classes!'.format(module))
+
+        cls.GROUPS[module.__name__] = subs
+
+        for s in subs:
+            cls.CONFIGS[s.__name__] = s
+            cls.GROUPS[s.__name__] = [s]
 
     @classmethod
     def _get_config_classes(cls):
-        return { k.lower(): v for k, v in cls.__dict__.items() if isclass(v) }
+        return { k.lower(): v for k, v in cls.CONFIGS.items() }
 
     @classmethod
     def _get_config_groups(cls):
@@ -56,49 +77,58 @@ class Gem5FlagConfig:
             raise Exception('{} not a valid config. Valid configs: {}'.format(
               config_name, ', '.join(config_classes.keys())))
 
-        config_class = config_classes[config_name]
-        config_methods = { k: v for k, v in
-            config_class.__dict__.items() if isinstance(v, staticmethod)}
+        from inspect import isfunction
 
-        before_init_fn = config_methods['before_init'].__func__
-        after_warmup_fn = config_methods['after_warmup'].__func__
+        config_class = config_classes[config_name]
+        config_methods = { x: getattr(config_class, x) for x in dir(config_class) 
+            if isfunction(getattr(config_class, x))}
+
+        before_init_fn = config_methods['before_init']
+        after_warmup_fn = config_methods['after_warmup']
         return before_init_fn, after_warmup_fn
 
-    @classmethod
-    def get_config_group_names(cls, group_name):
-        group_name = group_name.upper()
-        for group, classes in cls.GROUPS.items():
-            if group_name in group:
-                for config_class in classes:
-                    yield config_class.__name__
-
-    @classmethod
-    def maybe_show_configs(cls, args):
-        do_exit = False
-        if args.list_configs:
-            do_exit = True
-            pprint([k for k in cls._get_config_classes().keys()])
-        if args.list_groups:
-            do_exit = True
-            pprint([k for k in cls._get_config_groups().keys()])
-
-        if do_exit:
-            exit()
-    
     # Parser arguments
+    @classmethod
+    def _get_help_class(cls):
+        class Gem5FlagConfigHelp(Action):
+            def __init__(self, option_strings, dest, **kwargs):
+                kwargs['nargs'] = 0
+                assert len(option_strings) == 1
+                self.do_configs = False
+                self.do_groups = False
+                if 'configs' in option_strings[0]:
+                    self.do_configs = True
+                elif 'groups' in option_strings[0]:
+                    self.do_groups = True
+                else:
+                    raise Exception('Invalid use of help command!')
+                super().__init__(option_strings, dest, **kwargs)
 
-    @staticmethod
-    def add_parser_args(parser):
-        parser.add_argument('--cooldown-config', default='empty',
-            help='Enable Cooldown with a specific variant')
-        parser.add_argument('--config-group', default=None,
-            help='Run a specific group of configs (plus in order and OOO')
-        parser.add_argument('--list-configs', action='store_true', default=False,
+            def __call__(self, parser, namespace, values, option_string=None):
+                if self.do_configs:
+                    pprint([k for k in cls._get_config_classes().keys()])
+                if self.do_groups:
+                    for g, m in cls._get_config_groups().items():
+                        print('{}:'.format(g))
+                        pprint([c.__name__ for c in m])
+                        print()
+                exit(0)
+        
+        return Gem5FlagConfigHelp
+
+
+    @classmethod
+    def add_parser_args(cls, parser):
+        parser.add_argument('--flag-config', default='empty',
+            help='Use a debug flag configuration setting')
+        parser.add_argument('--flag-config-group', default=None,
+            help='Run a specific group of configs (plus in order and OOO)')
+        parser.add_argument('--list-configs', action=cls._get_help_class(),
             help='Show available configs')
-        parser.add_argument('--list-groups', action='store_true', default=False,
+        parser.add_argument('--list-groups', action=cls._get_help_class(),
             help='Show available groups')
 
     @staticmethod
     def add_optparse_args(parser):
-        parser.add_option('--cooldown-config', default='empty',
-            help='Enable Cooldown with a specific variant')
+        parser.add_option('--flag-config', default='empty',
+            help='Use a debug flag configuration setting')

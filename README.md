@@ -17,12 +17,12 @@ To install Lapidary:
 
 ```shell
 # Clone repository
-git clone https://github.com/efeslab/lapidary.git
+$ git clone https://github.com/efeslab/lapidary.git
 # Setup virtual environment
-python3 -m venv virt_env
-source virt_env/bin/activate
+$ python3 -m venv virt_env
+$ source virt_env/bin/activate
 # install
-pip3 install ./lapidary
+$ pip3 install ./lapidary
 ```
 
 **Note**: due to some [limitations](#current-limitations), it might be necessary to run 
@@ -34,7 +34,7 @@ There are two steps when running Lapidary: (1) creating checkpoints and (2) simu
 
 ### Configuration
 
-All configurations must comply with the [configuration schema][schema-file]. The file is assumed to be `./lapidary.yaml`, but can be specified explicitly by the
+All configurations must comply with the [configuration schema][schema-file]. The file is assumed to be `./.lapidary.yaml`, but can be specified explicitly by the
 `-c <PATH>` option available for all verbs.
 
 #### Examples
@@ -42,14 +42,43 @@ All configurations must comply with the [configuration schema][schema-file]. The
 1. Display the schema format and exit:
 
 ```shell
-python3 -m lapidary --config-help
+$ python3 -m lapidary --config-help
 ```
 
 2. A basic configuration (all you need to run basic simulations):
 
-`./lapidary.yaml`:
+`./.lapidary.yaml`:
 ```yaml
 gem5_path: path/to/gem5/relative/to/config/file/location
+```
+
+3. Creating a FlagConfigure custom class for enabling custom features during
+simulations. If you gate custom microarchitectural features behind debug flags,
+you can enable them inside of FlagConfigure class, either before simulation
+starts (`before_init`) or after warmup but before performance is measured
+(`after_warmup`). The default config is `empty`, which enables no flags.
+
+`./.lapidary.yaml`:
+```yaml
+...
+gem5_flag_config_plugin: ./example_configurations.py
+...
+```
+
+`./example_configurations.py`
+```python
+from lapidary.config import FlagConfigure
+
+class TestConfig(FlagConfigure):
+    @staticmethod
+    def before_init(system):
+        ...
+        
+    @staticmethod
+    def after_warmup():
+        import m5
+        m5.debug.flags["..."].enable()
+        ...
 ```
 
 A full example configuration file is available in [our testing directory][example-config].
@@ -64,25 +93,25 @@ an automated fashion (every N seconds or every M instructions) or interactively 
 1. Print help:
 
 ```shell
-python3 -m lapidary create --help
+$ python3 -m lapidary create --help
 ```
 
 2. Create checkpoints for an arbitrary binary every second:
 
 ```shell
-python3 -m lapidary create --cmd "..." --interval 1
+$ python3 -m lapidary create --cmd "..." --interval 1
 ```
 
 3. Create checkpoints for SPEC-CPU 2017 benchmarks (requires valid configuration path) and save them to `/mnt/storage` rather than the current working directory:
 
 ```shell
-python3 -m lapidary create --bench mcf --interval 5 --directory /mnt/storage
+$ python3 -m lapidary create --bench mcf --interval 5 --directory /mnt/storage
 ```
 
 4. Create checkpoints interactively:
 
 ```shell
-python3 -m lapidary create --cmd "..." --breakpoints ...
+$ python3 -m lapidary create --cmd "..." --breakpoints ...
 ```
 
 At each breakpoint, the user will be allowed to interact with the gdb process.
@@ -107,27 +136,39 @@ created from the `create` command. This command is useful for debugging issues w
 1. Simulate a single checkpoint from an arbitrary binary:
 
 ```shell
-python3 -m lapidary simulate --start-checkpoint \
+$ python3 -m lapidary simulate --start-checkpoint \
     test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test
 ```
 
 2. Simulate a single checkpoint from an arbitrary command (with arguments):
 
 ```shell
-python3 -m lapidary simulate --start-checkpoint \
+$ python3 -m lapidary simulate --start-checkpoint \
     test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test --args ... 
 ```
 
 3. Debug gem5 on a particular checkpoint:
 
 ```shell
-python3 -m lapidary simulate --start-checkpoint \
+$ python3 -m lapidary simulate --start-checkpoint \
     test_gdb_checkpoints/0_check.cpt --binary ./test/bin/test --args ... \
     --debug-mode
 ```
 
 `--debug-mode` will not only use `gem5.debug` instead of `gem5.opt`, but it will
 also runs gem5 through gdb.
+
+4. Display loaded FlagConfigurations and simulate using a custom configuration.
+
+```shell
+$ python3 -m lapidary simulate --list-configs
+
+['empty', 'testconfig']
+
+$ python3 -m lapidary simulate --start-checkpoint \
+    test_gdb_checkpoints/0_check.cpt --bin ./test/bin/test \
+    --flag-config testconfig
+```
 
 ### Parallel Simulation
 
@@ -145,7 +186,7 @@ checkpoints within `./test_gdb_checkpoints/`, e.g.
 etc.):
 
 ```shell
-python3 -m lapidary parallel-simulate --binary ./test/bin/test --args ... 
+$ python3 -m lapidary parallel-simulate --binary ./test/bin/test --args ... 
 ```
 
 
@@ -153,7 +194,7 @@ python3 -m lapidary parallel-simulate --binary ./test/bin/test --args ...
 checkpoint directory:
 
 ```shell
-python3 -m lapidary parallel-simulate --bench mcf --checkpoint-dir /mnt/storage
+$ python3 -m lapidary parallel-simulate --bench mcf --checkpoint-dir /mnt/storage
 ```
 
 ### Reporting
@@ -174,7 +215,7 @@ We plan on adding a built-in graphing facility (`report graph`) soon.
 1. Create a report after simulating checkpoints in `/mnt/storage`:
 
 ```shell
-python3 -m lapidary report process -d /mnt/storage
+$ python3 -m lapidary report process -d /mnt/storage
 ```
 
 The output is in `./report.json`, which looks like:
@@ -201,7 +242,7 @@ The output is in `./report.json`, which looks like:
  and `MLP` (memory-level parallelism) statistic.
 
  ```shell
- python3 -m lapidary report filter cpi -o cpi_only.yaml -i report.json
+ $ python3 -m lapidary report filter cpi -o cpi_only.yaml -i report.json
  ```
 
  This reads the report from `report.json` and writes the output into `cpi_only.yaml`.
