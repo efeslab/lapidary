@@ -75,7 +75,6 @@ class LapidaryConfig(dict):
             raise ConfigException('Empty configuration was provided!')
 
         parsed_config = self._parse_yaml_data(SCHEMA, raw_config)
-        print(parsed_config)
         try:
             super().__init__(**parsed_config)
         except:
