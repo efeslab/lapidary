@@ -7,7 +7,7 @@ weeks of simulation required to create viable checkpoints. This is done by takin
 core dumps of the program through gdb (along with gathering some other miscellanous process state information) and transforming the output into a gem5-compatible 
 checkpoint. Lapidary can then perform short simulations over many checkpoints
 (in accordance with the [SMARTS sampling methodology][smarts]) in order to 
-product statistically significant performance measurements.
+produce statistically significant performance measurements.
 
 For more information about Lapidary and its inception, please refer to our [blog post][blog].
 
