@@ -159,8 +159,6 @@ def modify_binary_ldd(config, old_bin):
 
 def main(args):
 
-    config = LapidaryConfig.get_config(args)
-
     if args.cmd and args.bench:
         raise Exception('Can only pick one!')
 
@@ -170,8 +168,6 @@ def main(args):
         args.cmd[0] = modify_binary_ldd(config, args.cmd[0])
 
         arg_list = args.cmd
-        print(arg_list)
-        print(config)
         directory = args.directory if args.directory is not None else '.'
         gdbproc = GDBProcess(arg_list,
                              checkpoint_interval=args.interval,
@@ -187,12 +183,12 @@ def main(args):
         benchmarks = SpecBench.get_benchmarks(args)
         for benchmark in benchmarks:
             print('Setting up process for {}...'.format(benchmark))
-            bench = SpecBench(config).create(
+            bench = SpecBench(args.config).create(
                                         args.suite, benchmark, args.input_type)
-            mod_bin = modify_binary_ldd(config, str(bench.binary))
+            mod_bin = modify_binary_ldd(args.config, str(bench.binary))
             arg_list = [mod_bin] + bench.args
 
-            directory = args.directory if args.directory is not None else config['spec2017_config']['workspace_path']
+            directory = args.directory if args.directory is not None else args.config['spec2017_config']['workspace_path']
             gdbproc = GDBProcess(arg_list,
                                  checkpoint_interval=args.interval,
                                  checkpoint_instructions=args.stepi,

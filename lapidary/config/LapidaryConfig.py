@@ -94,10 +94,3 @@ class LapidaryConfig(dict):
         parser.add_argument('--config-help', action=LapidaryConfigHelp,
             help='Show help for construction the configuration file.')
 
-    @classmethod
-    def get_config(cls, args):
-        if not hasattr(args, 'config'):
-            from pprint import pprint
-            pprint(args)
-        
-        return cls(args.config)
