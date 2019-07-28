@@ -1,4 +1,4 @@
-import gzip, json, os, re, resource, signal, shutil, subprocess, sys
+import gzip, json, os, re, resource, signal, shutil, subprocess, sys, logging
 
 from argparse import ArgumentParser
 from elftools.elf.elffile import ELFFile
@@ -6,10 +6,8 @@ from multiprocessing import Process
 from pathlib import Path
 from pprint import pprint
 from subprocess import Popen, TimeoutExpired
+from tempfile import NamedTemporaryFile
 from time import sleep
-
-
-
 
 # WORK_DIR = os.path.dirname(__file__)
 # if len( WORK_DIR ) == 0:
@@ -46,6 +44,11 @@ class GDBEngine:
                  checkpoint_root_dir,
                  compress_core_files,
                  convert_checkpoints):
+        '''
+            checkpoint_root_dir: Where to create the checkpoint directory.
+            compress_core_files: Whether or not to gzip the memory images.
+            convert_checkpoints:
+        '''
         from lapidary.checkpoint.GDBShell import GDBShell
         import gdb
         self.shell = GDBShell(self)
@@ -54,6 +57,7 @@ class GDBEngine:
         self.compress_processes  = {}
         self.convert_checkpoints = convert_checkpoints
         self.convert_processes   = {}
+        self.logger              = logger.getLogger(name=__name__)
 
         # Otherwise long arg strings get mutilated with '...'
         gdb.execute('set print elements 0')
@@ -133,7 +137,6 @@ class GDBEngine:
 
         return mappings
 
-
     @staticmethod
     def _create_convert_process(checkpoint_dir):
         gdb_checkpoint = GDBCheckpoint(checkpoint_dir)
@@ -195,7 +198,7 @@ class GDBEngine:
     def _create_gem5_checkpoint(self, debug_mode):
         chk_loc = self.chk_out_dir / '{}_check.cpt'.format(self.chk_num)
         if chk_loc.exists():
-            print('Warning: {} already exists, overriding.'.format(str(chk_loc)))
+            self.logger.warning('{} already exists, overriding.'.format(str(chk_loc)))
         else:
             chk_loc.mkdir(parents=True)
         pmem_name = 'system.physmem.store0.pmem'
@@ -234,11 +237,17 @@ class GDBEngine:
         self.chk_num += 1
 
         if debug_mode:
+            self.logger.info("Entering IPython shell for debug mode.")
             import IPython
             IPython.embed()
 
     @classmethod
     def _interrupt_in(cls, sec):
+        '''
+            Used to pause GDB with running in timed mode so that checkpoints 
+            can be made. A little hackish, but it works.
+        '''
+
         def control_c(pid, seconds):
             sleep(seconds)
             os.kill(pid, cls.SIGNAL)
@@ -255,7 +264,7 @@ class GDBEngine:
         current_pc = int(regs.get_pc_string())
         for vaddr, mapping in mappings.items():
             if current_pc in mapping and mapping.name in GDBEngine.BAD_MEM_REGIONS:
-                print('Skipping checkpoint at {} since it is in {} region'.format(
+                self.logger.debug('Skipping checkpoint at {} since it is in {} region'.format(
                       hex(current_pc), mapping.name))
                 return False
 
@@ -263,6 +272,13 @@ class GDBEngine:
 
     @staticmethod
     def _get_brk_value():
+        '''
+            Here we have to compile the get_brk program, which is injected into
+            the running binary so that it can make a syscall to retrieve the 
+            brk value.
+
+            Credit to Ofir Weisse for this particular bit.
+        '''
         import struct, gdb
         lang = gdb.execute('show language', to_string=True).split()[-1].split('"')[0]
         gdb.execute('set language c')
@@ -273,21 +289,21 @@ class GDBEngine:
 
         gdb.execute('compile file -raw %s/get_brk.c' % WORK_DIR )
         brk = 0
-        print( "#"* 20 + "cwd = %s" % os.getcwd() )
+        self.logger.debug( "#"* 20 + "cwd = %s" % os.getcwd() )
         try:
             with brk_file.open('rb') as f:
                 data    = f.read()[:8]
-                print(data)
-                print(struct.unpack('Q', data))
+                self.logger.debug(data)
+                self.logger.debug(struct.unpack('Q', data))
                 brk = struct.unpack('Q', data)[0]
         except:
             pass
         finally:
             brk_file.unlink()
-        # gdb.execute('set language {}'.format(lang))
-        print('Found brk: {} ({})'.format(brk, hex(brk)))
+        
+        gdb.execute('set language {}'.format(lang))
+        self.logger.info('Found brk: {} ({})'.format(brk, hex(brk)))
         return brk
-
 
 
     @staticmethod
@@ -297,40 +313,55 @@ class GDBEngine:
         gdb.execute('set language c')
         gdb.execute('compile file -raw %s/get_fs_base.c' % WORK_DIR )
         fs_base = 0
-        fs_base_file = Path('fs_base.txt')
+        fs_base_file = Path('/tmp/fs_base.txt')
         try:
             with fs_base_file.open('rb') as f:
                 data    = f.read()[:8]
-                print(data)
-                print(struct.unpack('Q', data))
+                self.logger.debug(data)
+                self.logger.debug(struct.unpack('Q', data))
                 fs_base = struct.unpack('Q', data)[0]
         except:
             pass
         finally:
             fs_base_file.unlink()
+        
         gdb.execute('set language {}'.format(lang))
-        print('Found FS BASE: {} ({})'.format(fs_base, hex(fs_base)))
+        self.logger.info('Found FS BASE: {} ({})'.format(fs_base, hex(fs_base)))
         return fs_base
 
     def _run_base(self, debug_mode):
+        '''
+            Used by all main run methods for process setup. Breaks at main and
+            fast-forwards until that point to avoid profiling glibc startup.
+        '''
+
         import gdb
         gdb.execute('set auto-load safe-path /')
         gdb.execute('exec-file {}'.format(self.binary))
         gdb.execute('file {}'.format(self.binary))
 
         gdb.execute('break main')
-        print('Running with args: "{}"'.format(self.args))
+        self.logger.info('Running with args: "{}"'.format(self.args))
 
         gdb.execute('run {}'.format(self.args))
         self.fs_base = self._get_fs_base()
         if debug_mode:
+            self.logger.info("Entering IPython shell for debug mode.")
             import IPython
             IPython.embed()
 
     def _poll_background_processes(self, wait=False):
+        '''
+            Check on that status of background threads which are processing 
+            checkpoint files.
+
+            wait: Whether or not to stall until all processes are complete,
+            default is false.
+        '''
+
         timeout = 0.001
         if wait:
-            print('Waiting for background processes to complete before exit.')
+            self.logger.info('Waiting for background processes to complete before exit.')
             timeout = None
         gzip_complete = []
         for file_path, gzip_proc in self.compress_processes.items():
@@ -338,12 +369,12 @@ class GDBEngine:
             if not gzip_proc.is_alive():
                 gzip_complete += [file_path]
                 if self.convert_checkpoints:
-                    print('Creating convert process for {} after gzip'.format(
+                    self.logger.info('Creating convert process for {} after gzip'.format(
                         str(file_path)))
                     convert_proc = GDBEngine._create_convert_process(file_path)
                     self.convert_processes[file_path.parent] = convert_proc
         for key in gzip_complete:
-            print('Background gzip for {} completed'.format(key))
+            self.logger.info('Background gzip for {} completed'.format(key))
             self.compress_processes.pop(key)
 
         convert_complete = []
@@ -352,17 +383,26 @@ class GDBEngine:
             if not convert_proc.is_alive():
                 convert_complete += [file_path]
         for key in convert_complete:
-            print('Background convert for {} completed'.format(key))
+            self.logger.info('Background convert for {} completed'.format(key))
             self.convert_processes.pop(key)
 
     def _try_create_checkpoint(self, debug_mode):
+        '''
+            Attempt to create a checkpoint.
+        '''
+        
         self._poll_background_processes()
 
         if self._can_create_valid_checkpoint():
-            print('Creating checkpoint #{}'.format(self.chk_num))
+            self.logger.info('Creating checkpoint #{}'.format(self.chk_num))
             self._create_gem5_checkpoint(debug_mode)
 
+
     def run_time(self, sec_between_chk, max_iter, debug_mode):
+        '''
+            Main method for generating checkpoints every N seconds.
+        '''
+
         import gdb
         print('Running with {} seconds between checkpoints.'.format(
           sec_between_chk))
@@ -380,6 +420,12 @@ class GDBEngine:
 
 
     def run_inst(self, insts_between_chk, max_iter, debug_mode):
+        '''
+            Main method for generating checkpoints every N instructions.
+            Not recommended, as stepping by number of instructions is precise,
+            yet very slow.
+        '''
+
         import gdb
         print('Running with {} instructions between checkpoints.'.format(
           insts_between_chk))
@@ -394,6 +440,12 @@ class GDBEngine:
                 return
 
     def run_interact(self, breakpoints, debug_mode):
+        '''
+            Main method for running the checkpoint engine in interactive mode.
+            This invokes the GDBShell and allows for manual checkpoint creation
+            and general process inspection.
+        '''
+
         import gdb
         print('Running with {} breakpoints.'.format(len(breakpoints)))
         for breakpoint in breakpoints:

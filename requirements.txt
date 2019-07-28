@@ -1,3 +1,4 @@
+wheel
 ipython
 jinja2
 matplotlib

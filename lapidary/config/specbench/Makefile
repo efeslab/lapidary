@@ -1,6 +1,6 @@
 .PHONY: all default clean install
 
-SRC17=src/
+SRC17=src
 SPEC17_ROOT=$(abspath ../spec-cpu2017)
 SPEC17_BENCH=$(foreach b, $(wildcard $(SRC17)/*), $(shell basename $(b)))
 SPEC17_TARGETS=$(foreach b, $(SPEC17_BENCH), build-spec17-$(b))
