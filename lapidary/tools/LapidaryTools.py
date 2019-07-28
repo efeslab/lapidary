@@ -3,6 +3,16 @@ from argparse import ArgumentParser
 from lapidary.config import LapidaryConfig
 
 class ToolDecorator:
+    '''
+        Custom decorator for adding commands to the main lapidary module.
+        Make sure to add this as the lowest decorator in the stack, i.e.:
+
+        @staticmethod
+        @ToolDecorator
+
+        Otherwise you'll get some fun bugs.
+    '''
+
     def __init__(self, name):
         self.name = name
 
@@ -59,8 +69,11 @@ class LapidaryTools:
 
         return lambda args: Report.main(args)
 
-
     def __iter__(self):
+        '''
+            Returns all functions with the __wrapped__ attribute, i.e. all
+            of the functions decorated with the ToolDecorator.
+        '''
         import inspect
         fns = inspect.getmembers(self, inspect.isfunction)
         for fname, fn in fns:
