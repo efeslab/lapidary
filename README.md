@@ -4,7 +4,7 @@ Lapidary is a tool we have built to enable more efficient [gem5][gem5] simulatio
 
 Lapidary works by creating gem5 checkpoints on bare-metal to avoid the
 weeks of simulation required to create viable checkpoints. This is done by taking 
-core dumps of the program through gdb (along with gathering some other miscellanous process state information) and transforming the output into a gem5-compatible 
+core dumps of the program through gdb (along with gathering some other miscellaneous process state information) and transforming the output into a gem5-compatible 
 checkpoint. Lapidary can then perform short simulations over many checkpoints
 (in accordance with the [SMARTS sampling methodology][smarts]) in order to 
 produce statistically significant performance measurements.
