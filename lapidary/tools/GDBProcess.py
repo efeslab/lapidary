@@ -147,17 +147,32 @@ def modify_binary_ldd(config, old_bin):
         libc, should one have been provided via the Lapidary config. Requires
         patchelf.
     '''
+    logger = logging.getLogger()
 
     ld_path = None
     if 'libc_path' in config:
-        ld_sos = glob.glob(f"{config['libc_path']}/lib/ld*.so")
-        assert ld_sos and len(ld_sos) == 1
+        ld_sos = glob.glob(f'{config["libc_path"]}/lib/ld*.so')
+        if not ld_sos:
+            emsg = f'Could not find any ld.so in {config["libc_path"]}!'
+            logger.error(emsg)
+            raise Exception(emsg)
+
+        if len(ld_sos) > 1:
+            emsg = f'Too many options for ld.so: {", ".join(ld_sos)}'
+            logger.error(emsg)
+            raise Exception(emsg)
+
         ld_path = ld_sos[0]
 
     if ld_path is not None:
         new_bin = Path(str(old_bin) + '.mod')
         if not new_bin.exists():
-            subprocess.check_call(shlex.split('which patchelf'))
+            proc = subprocess.run(shlex.split('which patchelf'))
+            if proc.returncode != 0:
+                emsg = '"patchelf" is not installed---please install before continuing with a custom libc'
+                logger.error(emsg)
+                raise Exception(emsg)
+                
             shutil.copyfile(old_bin, new_bin)
             shutil.copymode(old_bin, new_bin)
             cmdstr = f'patchelf --set-interpreter {ld_path} {new_bin}'

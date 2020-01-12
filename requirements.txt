@@ -1,4 +1,5 @@
 wheel
+diff-match-patch
 ipython
 jinja2
 matplotlib

@@ -1,5 +1,7 @@
 from argparse import Action
 from pathlib import Path
+
+import logging
 import yaml
 
 from lapidary.utils import gettype

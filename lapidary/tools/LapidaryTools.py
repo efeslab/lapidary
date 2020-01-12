@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import logging
 
 from lapidary.config import LapidaryConfig
 
@@ -28,6 +29,7 @@ class LapidaryTools:
 
     def __init__(self, parser):
         self.parser = parser
+        self.add_logging_args()
         LapidaryConfig.add_config_arguments(parser)
         # add parser args
         subparsers = self.parser.add_subparsers()
@@ -36,6 +38,12 @@ class LapidaryTools:
             cmd = subparsers.add_parser(cmd_name)
             run_fn = arg_add_fn(cmd)
             cmd.set_defaults(fn=run_fn)
+
+    def add_logging_args(self):
+        self.parser.add_argument('--log-level', '-l', help='Set level for logging.',
+                                 choices=[logging.CRITICAL, logging.ERROR,
+                                          logging.WARNING, logging.INFO,
+                                          logging.DEBUG, logging.NOTSET])
     
     @staticmethod
     @ToolDecorator("create")
@@ -81,4 +89,8 @@ class LapidaryTools:
                 yield fn.command_name, fn
 
     def parse_args(self):
+        '''
+            Parse configurations and do the basic setup for the logging 
+            infrastructure before anything else occurs.
+        '''
         return self.parser.parse_args()
