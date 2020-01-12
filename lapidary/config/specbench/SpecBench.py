@@ -1,3 +1,4 @@
+from lapidary.config.LapidaryConfig import LapidaryConfig
 from lapidary.config.specbench.Benchmark import Benchmark
 from lapidary.config.specbench.Spec2017Bench import *
 
@@ -42,6 +43,7 @@ class SpecBench:
             exit(0)
 
     def __init__(self, config):
+        assert isinstance(config, LapidaryConfig)
         assert 'spec2017_config' in config
         self.spec_config = config['spec2017_config']
 

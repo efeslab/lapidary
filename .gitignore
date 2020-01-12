@@ -142,7 +142,9 @@ lapidary-code.code-workspace
 .vscode/ipch/681ea811cfbf718c/get_fs_base.ipch
 .vscode/ipch/681ea811cfbf718c/mmap_address.bin
 
-# Proprietary
+# Proprietary/testing related
 spec-cpu2017
 workspace_lapidary_spec17/
 *.bak
+log.txt
+simulation_results

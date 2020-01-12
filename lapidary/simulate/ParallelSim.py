@@ -1,6 +1,8 @@
 import lapidary.simulate.Experiment as Experiment
 import lapidary.utils
+from lapidary.utils import Utils
 from lapidary.config.specbench.SpecBench import *
+from lapidary.config import Gem5FlagConfig
 
 import json
 import os
@@ -28,10 +30,10 @@ class ParallelSim:
         mode = 'o3'
         if args.in_order:
             mode = 'inorder'
-        elif args.invisispec:
-            mode = 'invisispec_{}'.format(args.scheme)
-        elif args.cooldown_config != 'empty':
-            mode = 'cooldown_{}'.format(args.cooldown_config)
+        # elif args.invisispec:
+        #     mode = 'invisispec_{}'.format(args.scheme)
+        elif args.flag_config != 'empty':
+            mode = args.flag_config
 
         self.summary_path = output_dir_parent / '{}_{}_summary.json'.format(
             args.bench, mode)
@@ -102,11 +104,11 @@ class ParallelSim:
                 '--reportable-insts', str(args.reportable_insts),
                 '--start-checkpoint', str(chkpt),
                 '--output-dir', str(output_dir),
-                '--cooldown-config', str(args.cooldown_config)]
+                '--flag-config', str(args.flag_config)]
             if args.in_order:
                 arg_list += ['--in-order']
-            if args.invisispec:
-                arg_list += ['--invisispec', '--scheme', args.scheme]
+            # if args.invisispec:
+            #     arg_list += ['--invisispec', '--scheme', args.scheme]
             exp_args[str(chkpt)] = arg_list
 
             result_file = output_dir / 'res.json'
@@ -135,9 +137,13 @@ class ParallelSim:
 
 
     def __del__(self):
-        ''' On destruction, output summary to summary file. '''
-        with self.summary_path.open('w') as f:
-            json.dump(self.summary, f, indent=4)
+        ''' 
+            On destruction, output summary to summary file, assuming we made 
+            if far enough to have created the summary file path.
+        '''
+        if hasattr(self, 'summary_path'):
+            with self.summary_path.open('w') as f:
+                json.dump(self.summary, f, indent=4)
 
     @staticmethod
     def _run_process(experiment_args, log_file):
@@ -224,15 +230,12 @@ class ParallelSim:
                             if not result_file.exists():
                                 failed_counter += 1
                                 self.summary['checkpoints'][checkpoint] = 'failed'
-                                #print('Aww')
                             else:
                                 successful_counter += 1
                                 self.summary['checkpoints'][checkpoint] = 'successful'
-                                #print('DING')
                         elif successful:
                             done_waiting = False
                             tasks[task] = time()
-                            #print('RESET')
                         else:
                             done_waiting = False
                             max_time = max(time() - start_time, max_time)
@@ -244,9 +247,6 @@ class ParallelSim:
                         done_waiting = True
                     if successful_counter >= self.num_checkpoints:
                         done_waiting = True
-
-                    #print('\n{0} tasks, max time of {1:.1f} seconds'.format(
-                    #len(tasks), max_time))
 
                     self.do_visual_update()
 
@@ -294,7 +294,7 @@ class ParallelSim:
     def add_args(parser):
         # SpecBench.add_parser_args(parser)
         Experiment.add_experiment_args(parser)
-        # CooldownConfig.add_parser_args(parser)
+        # Gem5FlagConfig.add_parser_args(parser)
 
         parser.add_argument('--checkpoint-dir', '-d',
                             help='Locations of all the checkpoints')
@@ -315,8 +315,8 @@ class ParallelSim:
         # cls.add_args(parser)
 
         # args = parser.parse_args()
-        SpecBench.maybe_display_spec_info(args)
-        CooldownConfig.maybe_show_configs(args)
+        # SpecBench.maybe_display_spec_info(args)
+        # CooldownConfig.maybe_show_configs(args)
 
         benchmarks = SpecBench.get_benchmarks(args)
 
@@ -328,7 +328,7 @@ class ParallelSim:
 
         print('ParallelSim for {}'.format(benchmark))
         args.bench = benchmark
-        if args.all_configs or args.config_group is not None:
+        if args.all_configs or args.flag_config_group is not None:
             config_names = CooldownConfig.get_all_config_names() \
                             if args.all_configs \
                             else CooldownConfig.get_config_group_names(args.config_group)
@@ -339,15 +339,15 @@ class ParallelSim:
             sim.start()
             # Run everything else:
             args.in_order = False
-            for cooldown_config_name in config_names:
-                if cooldown_config_name == 'default':
+            for flag_config_name in config_names:
+                if flag_config_name == 'default':
                     print('Skipping default configuration')
                     continue
-                if cooldown_config_name == 'empty':
+                if flag_config_name == 'empty':
                     print('Out-of-order simulation')
                 else:
-                    print('Cooldown config {} simulation'.format(cooldown_config_name))
-                args.cooldown_config = cooldown_config_name
+                    print('Cooldown config {} simulation'.format(flag_config_name))
+                args.flag_config = flag_config_name
                 sim = ParallelSim(args, append_log_file=True)
                 sim.start()
 
@@ -356,7 +356,7 @@ class ParallelSim:
                 sim = cls(args)
                 sim.start()
             except Exception as e:
-                print(e)
+                print('Could not start simulations:', e)
                 return 1
 
         return 0

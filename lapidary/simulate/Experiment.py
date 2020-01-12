@@ -319,7 +319,6 @@ def do_experiment(args):
     if args.bench is not None and args.binary is not None:
         raise Exception('Can only pick one!')
 
-
     exp_bin = args.binary
     exp_args = args.args
     if args.bench:
@@ -328,7 +327,7 @@ def do_experiment(args):
             raise Exception('Experiment.py only supports a single task!')
         benchmark = benchmarks[0]
 
-        bench = SpecBench().create(args.suite, benchmark, args.input_type)
+        bench = SpecBench(args.config).create(args.suite, benchmark, args.input_type)
         exp_bin = bench.binary
         exp_args = bench.args
 
