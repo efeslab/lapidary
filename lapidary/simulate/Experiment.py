@@ -266,7 +266,11 @@ def run_binary_on_gem5(bin_path, bin_args, parsed_args):
     # os.environ['LD_PRELOAD'] = LD_PRELOAD_STR
     env = copy.deepcopy(os.environ)
     env['PYTHONPATH'] = str(pythonpath)
-    return subprocess.call(gem5_args, env=env)
+    # iangneal: we are explicit with the stdout/stderr so that we preserve any
+    # prior redirection.
+    return subprocess.call(gem5_args, 
+                           env=env, stdout=sys.stdout, stderr=sys.stderr)
+
 
 def do_make(target=''):
     ret = os.system('make {}'.format(target))

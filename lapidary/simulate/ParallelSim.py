@@ -19,6 +19,7 @@ from pprint import pprint
 from progressbar import ProgressBar
 from subprocess import Popen, PIPE, DEVNULL
 from time import time, sleep
+from tempfile import TemporaryFile
 
 
 class ParallelSim:
@@ -171,27 +172,35 @@ class ParallelSim:
             This is already a separate process.
         '''
 
-        out = io.StringIO()
-        err = io.StringIO()
-
         parser = ArgumentParser()
         LapidaryConfig.add_config_arguments(parser)
         Experiment.add_experiment_args(parser)
         args = parser.parse_args(args=experiment_args[1:])   
 
-        sys.stdout = out
-        sys.stderr = err
-        Experiment.do_experiment(args)
+        prefix = 'lapidary_parallel_simulate'
+        with TemporaryFile(mode='w+', prefix=prefix) as out, \
+             TemporaryFile(mode='w+', prefix=prefix) as err, \
+             open(log_file, 'a') as f:
 
-        with open(log_file, 'a') as f:
+            stdout = sys.stdout
+            stderr = sys.stderr
+
+            sys.stdout = out
+            sys.stderr = err   
+            print('something', file=stdout)
+            Experiment.do_experiment(args)
+            print('something', file=stdout)
+            out.seek(0)
+            err.seek(0)
+
             try:
                 lockf(f, LOCK_EX)
                 f.write('-'*80 + os.linesep)
                 f.write(' '.join(experiment_args) + os.linesep)
                 f.write('STDOUT ' + '-'*40 + os.linesep)
-                f.write(out.getvalue())
+                f.write(out.read())
                 f.write('STDERR ' + '-'*40 + os.linesep)
-                f.write(err.getvalue())
+                f.write(err.read())
             finally:
                 lockf(f, LOCK_UN)
 
