@@ -12,21 +12,39 @@ from progressbar import ProgressBar
 from time import sleep
 
 from lapidary.utils import *
-from lapidary.checkpoint.Checkpoints import GDBCheckpoint
+from lapidary.checkpoint.Checkpoints import *
 
 class GDBCheckpointConverter:
 
-    def __init__(self, gdb_checkpoint):
+    def __init__(self, gdb_checkpoint, keyframe=None, diffs=None):
         assert isinstance(gdb_checkpoint, GDBCheckpoint)
         assert gdb_checkpoint.is_valid_checkpoint()
+        assert keyframe is None or isinstance(keyframe, Gem5Checkpoint)
         self.gdb_checkpoint = gdb_checkpoint
         self.mappings = self.gdb_checkpoint.get_mappings()
+        self.keyframe = keyframe
+        self.diff_frames = diffs
 
     @staticmethod
     def compress_memory_image(file_path):
+        '''
+            gem5 can accept either compressed or uncompressed pmem files 
+            (compressed with gzip), as long as they have the same file name.
+
+            The only downside is that simulations take longer to start.
+        '''
         subprocess.call(['gzip', '-f', str(file_path)])
         gzip_path = Path(str(file_path) + '.gz')
         gzip_path.rename(file_path)
+
+
+    def _create_diff_file(self, src_pmem_fp, new_pmem_fp):
+        if self.keyframe is None:
+            return new_pmem_file
+        
+        from diff_match_patch import diff_match_patch
+        dmp = diff_match_patch()
+
 
     def create_pmem_file(self):
 
