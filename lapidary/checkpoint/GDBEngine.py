@@ -438,12 +438,15 @@ class GDBEngine:
                 gdb.execute('continue')
                 proc.join()
                 self._try_create_checkpoint(debug_mode)
+                self.logger.info('Checkpoint {} has been created, continuing.'.format(self.chk_num))
             except (gdb.error, KeyboardInterrupt) as e:
-                self._poll_background_processes(True)
-                return
+                self.logger.error(e)
+                break
+        
+        self._poll_background_processes(True)
 
 
-    def run_inst(self, insts_between_chk, max_iter, debug_mode):
+    def run_inst(self, insts_between_chk, max_iter, keyframes, debug_mode):
         '''
             Main method for generating checkpoints every N instructions.
             Not recommended, as stepping by number of instructions is precise,

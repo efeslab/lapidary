@@ -150,28 +150,11 @@ class ParallelSim:
     @staticmethod
     def _run_process(experiment_args, log_file):
         '''
-        experiment = Popen(experiment_args, stdin=DEVNULL, stdout=PIPE, stderr=PIPE)
-        stdout, stderr = experiment.communicate()
-
-        with open(log_file, 'a') as f:
-            try:
-                lockf(f, LOCK_EX)
-                f.write('-'*80 + os.linesep)
-                f.write(' '.join(experiment_args) + os.linesep)
-                f.write('STDOUT ' + '-'*40 + os.linesep)
-                f.write(stdout.decode('ascii'))
-                f.write('STDERR ' + '-'*40 + os.linesep)
-                f.write(stderr.decode('ascii'))
-            finally:
-                lockf(f, LOCK_UN)
-        '''
-        '''
             Essentially, we want to just run the experiment stuff again.
             So, we pretend like we're running this from scratch.
 
             This is already a separate process.
         '''
-
         parser = ArgumentParser()
         LapidaryConfig.add_config_arguments(parser)
         Experiment.add_experiment_args(parser)
@@ -182,14 +165,9 @@ class ParallelSim:
              TemporaryFile(mode='w+', prefix=prefix) as err, \
              open(log_file, 'a') as f:
 
-            stdout = sys.stdout
-            stderr = sys.stderr
-
             sys.stdout = out
-            sys.stderr = err   
-            print('something', file=stdout)
+            sys.stderr = err
             Experiment.do_experiment(args)
-            print('something', file=stdout)
             out.seek(0)
             err.seek(0)
 
@@ -265,6 +243,8 @@ class ParallelSim:
                     for task, start_time in tasks.items():
                         task.wait(wait_time)
                         if task.ready():
+                            # This re-raises any exceptions.
+                            task.get()
                             successful      = True
                             finished_tasks += [task]
                             result_file     = task_results.pop(task)
@@ -292,9 +272,7 @@ class ParallelSim:
 
                     self.do_visual_update()
 
-            # Now we're waiting on straggler processes:
-            #print('\rWaiting for stragglers.\n')
-            #print('Waiting for stragglers.\n')
+            # Now we're waiting on straggler processes
             ready_to_terminate = successful_counter >= self.num_checkpoints
             while not ready_to_terminate:
                 ready_to_terminate = True
