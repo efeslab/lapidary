@@ -1,3 +1,4 @@
+from lapidary.config.LapidaryConfig import LapidaryConfig
 from lapidary.config.specbench.Benchmark import Benchmark
 from lapidary.config.specbench.Spec2017Bench import *
 
@@ -41,16 +42,12 @@ class SpecBench:
                 pprint(SpecBench.SUITES[suite].BENCHMARKS)
             exit(0)
 
-    # def __init__(self, bin_dir=Path('bin'), input_dir=Path('data')):
-    #     self.bin_dir = bin_dir
-    #     self.input_dir = input_dir
-
     def __init__(self, config):
+        assert isinstance(config, LapidaryConfig)
         assert 'spec2017_config' in config
         self.spec_config = config['spec2017_config']
 
     def create(self, suite_name, bench_name, input_type):
-        print("Hello!")
         assert suite_name in SpecBench.SUITES
         spec_cls = SpecBench.SUITES[suite_name]
         specsuite = spec_cls(self.spec_config['spec2017_src_path'], 

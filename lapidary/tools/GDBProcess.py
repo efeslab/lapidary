@@ -1,6 +1,6 @@
 import gzip, json, os, re, resource, signal, shutil, subprocess, sys, copy
 
-import glob, shlex
+import glob, shlex, logging
 
 from argparse import ArgumentParser
 from elftools.elf.elffile import ELFFile
@@ -8,18 +8,6 @@ from multiprocessing import Process
 from pathlib import Path
 from pprint import pprint
 from subprocess import Popen, TimeoutExpired
-
-def join(self, timeout):
-    try:
-        self.wait(timeout)
-    except TimeoutExpired:
-        pass
-
-def is_alive(self):
-    return self.returncode is None
-
-Popen.join     = join
-Popen.is_alive = is_alive
 
 from tempfile import NamedTemporaryFile
 from time import sleep
@@ -40,6 +28,7 @@ from lapidary.checkpoint.CheckpointTemplate import *
 import lapidary.checkpoint.CheckpointConvert
 from lapidary.config import LapidaryConfig
 from lapidary.checkpoint.GDBEngine import GDBEngine
+import lapidary.pypatch 
 
 GLIBC_PATH = Path('../libc/glibc/build/install/lib').resolve()
 LD_LIBRARY_PATH_STR = '{}:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu'.format(GLIBC_PATH)
@@ -55,7 +44,8 @@ class GDBProcess:
                        compress=False,
                        convert=True,
                        debug_mode=False,
-                       ld_path=None):
+                       ld_path=None,
+                       keyframes=5):
 
         set_arg_string = 'set $args = "{}"'.format(' '.join(arg_list))
         print(set_arg_string)
@@ -75,6 +65,7 @@ class GDBProcess:
         env['CHECKPOINT_ROOT_DIR']   = str(root_dir)
         env['CHECKPOINT_COMPRESS']   = str(compress)
         env['CHECKPOINT_CONVERT']    = str(convert)
+        env['CHECKPOINT_KEYFRAMES']  = str(keyframes)
 
         if ld_path is not None:
             assert ld_path.exists()
@@ -99,6 +90,11 @@ def add_arguments(parser):
         help='For debugging program execution, run IPython after checkpointing.')
     parser.add_argument('--directory', '-d', default=None,
         help='The parent directory of the output checkpoint directories.')
+    parser.add_argument('--keyframes', '-k', default=5, type=int, nargs=1,
+        help=('Create a checkpoint "keyframe" every N checkpoints, with the '
+              'rest of the checkpoints being diffs off of these keyframes in '
+              'order to save space. Default is every 5 checkpoints. Set to 0 '
+              'to disable this feature.'))
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--stepi', '-s', nargs='?', type=int,
@@ -112,21 +108,28 @@ def add_arguments(parser):
 
 
 def gdb_main():
+    '''
+        This is the main function for when this script gets run by GDB. This 
+        just retrieves the arguments from the environment variables and starts
+        the checkpointing engine. 
+    '''
+
     checkpoint_root_dir = str(os.environ['CHECKPOINT_ROOT_DIR'])
     max_checkpoints     = int(os.environ['CHECKPOINT_MAXIMUM'])
     debug_mode          = os.environ['CHECKPOINT_DEBUG'] == 'True'
     compress_core_files = os.environ['CHECKPOINT_COMPRESS'] == 'True'
     convert_checkpoints = os.environ['CHECKPOINT_CONVERT'] == 'True'
+    keyframes           = os.environ['CHECKPOINT_KEYFRAMES']
 
     engine = GDBEngine(checkpoint_root_dir, compress_core_files,
                        convert_checkpoints)
 
     if 'CHECKPOINT_INTERVAL' in os.environ:
         checkpoint_interval = float(os.environ['CHECKPOINT_INTERVAL'])
-        engine.run_time(checkpoint_interval, max_checkpoints, debug_mode)
+        engine.run_time(checkpoint_interval, max_checkpoints, keyframes, debug_mode)
     elif 'CHECKPOINT_INSTS' in os.environ:
         checkpoint_instructions = int(os.environ['CHECKPOINT_INSTS'])
-        engine.run_inst(checkpoint_instructions, max_checkpoints, debug_mode)
+        engine.run_inst(checkpoint_instructions, max_checkpoints, keyframes, debug_mode)
     elif 'CHECKPOINT_LOCS' in os.environ:
         checkpoint_locations = os.environ['CHECKPOINT_LOCS'].split()
         engine.run_interact(checkpoint_locations, debug_mode)
@@ -139,15 +142,37 @@ def add_args(parser):
     add_arguments(parser)
 
 def modify_binary_ldd(config, old_bin):
+    '''
+        This is used to modify binaries to use a custom linker from a custom
+        libc, should one have been provided via the Lapidary config. Requires
+        patchelf.
+    '''
+    logger = logging.getLogger()
+
     ld_path = None
     if 'libc_path' in config:
-        ld_sos = glob.glob(f"{config['libc_path']}/lib/ld*.so")
-        assert ld_sos and len(ld_sos) == 1
+        ld_sos = glob.glob(f'{config["libc_path"]}/lib/ld*.so')
+        if not ld_sos:
+            emsg = f'Could not find any ld.so in {config["libc_path"]}!'
+            logger.error(emsg)
+            raise Exception(emsg)
+
+        if len(ld_sos) > 1:
+            emsg = f'Too many options for ld.so: {", ".join(ld_sos)}'
+            logger.error(emsg)
+            raise Exception(emsg)
+
         ld_path = ld_sos[0]
 
     if ld_path is not None:
         new_bin = Path(str(old_bin) + '.mod')
         if not new_bin.exists():
+            proc = subprocess.run(shlex.split('which patchelf'))
+            if proc.returncode != 0:
+                emsg = '"patchelf" is not installed---please install before continuing with a custom libc'
+                logger.error(emsg)
+                raise Exception(emsg)
+                
             shutil.copyfile(old_bin, new_bin)
             shutil.copymode(old_bin, new_bin)
             cmdstr = f'patchelf --set-interpreter {ld_path} {new_bin}'
@@ -158,9 +183,6 @@ def modify_binary_ldd(config, old_bin):
     return old_bin
 
 def main(args):
-
-    config = LapidaryConfig.get_config(args)
-
     if args.cmd and args.bench:
         raise Exception('Can only pick one!')
 
@@ -170,8 +192,6 @@ def main(args):
         args.cmd[0] = modify_binary_ldd(config, args.cmd[0])
 
         arg_list = args.cmd
-        print(arg_list)
-        print(config)
         directory = args.directory if args.directory is not None else '.'
         gdbproc = GDBProcess(arg_list,
                              checkpoint_interval=args.interval,
@@ -181,18 +201,19 @@ def main(args):
                              root_dir=directory,
                              compress=args.compress,
                              convert=not args.no_convert,
-                             debug_mode=args.debug_mode)
+                             debug_mode=args.debug_mode,
+                             keyframes=args.keyframes)
         gdbprocs = [gdbproc]
     else:
         benchmarks = SpecBench.get_benchmarks(args)
         for benchmark in benchmarks:
             print('Setting up process for {}...'.format(benchmark))
-            bench = SpecBench(config).create(
+            bench = SpecBench(args.config).create(
                                         args.suite, benchmark, args.input_type)
-            mod_bin = modify_binary_ldd(config, str(bench.binary))
+            mod_bin = modify_binary_ldd(args.config, str(bench.binary))
             arg_list = [mod_bin] + bench.args
 
-            directory = args.directory if args.directory is not None else config['spec2017_config']['workspace_path']
+            directory = args.directory if args.directory is not None else args.config['spec2017_config']['workspace_path']
             gdbproc = GDBProcess(arg_list,
                                  checkpoint_interval=args.interval,
                                  checkpoint_instructions=args.stepi,
@@ -201,7 +222,8 @@ def main(args):
                                  root_dir=directory,
                                  compress=args.compress,
                                  convert=not args.no_convert,
-                                 debug_mode=args.debug_mode)
+                                 debug_mode=args.debug_mode,
+                                 keyframes=args.keyframes)
             gdbprocs += [gdbproc]
 
     for gdbproc in gdbprocs:

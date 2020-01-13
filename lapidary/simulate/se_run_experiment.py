@@ -66,11 +66,15 @@ from common.cpu2000 import *
 def add_benchmark_args(parser):
     try:
         from lapidary.config.Gem5FlagConfig import Gem5FlagConfig
+        from lapidary.config.LapidaryConfig import LapidaryConfig
     except ImportError:
         from pathlib import Path
         sys.path.append(str(Path(__file__).parent.parent.parent))
         from lapidary.config.Gem5FlagConfig import Gem5FlagConfig
+        from lapidary.config.LapidaryConfig import LapidaryConfig
+
     Gem5FlagConfig.add_optparse_args(parser)
+    LapidaryConfig.add_optparse_args(parser)
 
     parser.add_option('--reportable-insts', dest='reportable_insts',
         help='The number of instructions we want to report statistics on (after warmup)',
@@ -81,7 +85,7 @@ def add_benchmark_args(parser):
                         help='Where to output stuff like stats')
     parser.add_option('--syscalls-hook', action='store_true',
                         default=False, help='Use strace log to replace syscalls')
-    parser.add_option('--config', help='What Lapidary config to use')
+    # parser.add_option('--config', help='What Lapidary config to use')
 
 
 def get_processes(options):

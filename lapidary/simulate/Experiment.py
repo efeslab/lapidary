@@ -71,7 +71,7 @@ def RunExperiment( options, root, system, FutureClass ):
     exit_cause = None
     system.exit_on_work_items = True
 
-    config = LapidaryConfig.get_config(options)
+    config = LapidaryConfig(options.config_file)
     Gem5FlagConfig.parse_plugins(config)
 
     before_init_config, after_warmup_config = Gem5FlagConfig.get_config(
@@ -266,7 +266,11 @@ def run_binary_on_gem5(bin_path, bin_args, parsed_args):
     # os.environ['LD_PRELOAD'] = LD_PRELOAD_STR
     env = copy.deepcopy(os.environ)
     env['PYTHONPATH'] = str(pythonpath)
-    return subprocess.call(gem5_args, env=env)
+    # iangneal: we are explicit with the stdout/stderr so that we preserve any
+    # prior redirection.
+    return subprocess.call(gem5_args, 
+                           env=env, stdout=sys.stdout, stderr=sys.stderr)
+
 
 def do_make(target=''):
     ret = os.system('make {}'.format(target))
@@ -319,7 +323,6 @@ def do_experiment(args):
     if args.bench is not None and args.binary is not None:
         raise Exception('Can only pick one!')
 
-
     exp_bin = args.binary
     exp_args = args.args
     if args.bench:
@@ -328,7 +331,7 @@ def do_experiment(args):
             raise Exception('Experiment.py only supports a single task!')
         benchmark = benchmarks[0]
 
-        bench = SpecBench().create(args.suite, benchmark, args.input_type)
+        bench = SpecBench(args.config).create(args.suite, benchmark, args.input_type)
         exp_bin = bench.binary
         exp_args = bench.args
 

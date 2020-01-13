@@ -1,3 +1,6 @@
 [submodule "gistsnip"]
 	path = gistsnip
 	url = https://github.com/loov/gistsnip.git
+[submodule "gem5_master"]
+	path = gem5_master
+	url = https://gem5.googlesource.com/public/gem5

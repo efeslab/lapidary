@@ -60,6 +60,14 @@ class GDBCheckpoint:
 
 
 class Gem5Checkpoint(GDBCheckpoint):
-
     def is_valid_checkpoint(self):
         return super().is_valid_checkpoint(self) and self.pmem_file.exists()
+
+class Gem5DiffCheckpoint(GDBCheckpoint):
+    
+    def __init__(self, checkpoint_directory):
+        super().__init__(self, checkpoint_directory)
+        self.pmem_diff_file = self.pmem_file + '.diff'
+    
+    def is_valid_checkpoint(self):
+        return super().is_valid_checkpoint(self) and self.pmem_diff_file.exists()

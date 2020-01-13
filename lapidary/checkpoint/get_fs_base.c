@@ -21,7 +21,7 @@ void _gdb_expr() {
     char buf[BUFSIZ] = {'\0'};
     uint64_t addr = 0;
     get_fs_base(&addr);
-    int fd = open("fs_base.txt", O_CREAT | O_APPEND | O_WRONLY, 0666);
+    int fd = open("/tmp/fs_base.txt", O_CREAT | O_APPEND | O_WRONLY, 0666);
     write(fd, &addr, BUFSIZ);
     close(fd);
 }

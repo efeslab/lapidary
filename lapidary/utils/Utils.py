@@ -11,6 +11,15 @@ class StatsFile:
         self.file_path = file_path
         self.cached_stats = {}
 
+    def __del__(self):
+        '''
+            The accumulated stats file can actually get quite large, since we 
+            just dump the file several hundred times as we count instructions.
+            This will ensure it doesn't linger and absorb the entire disk.
+        '''
+        if self.file_path.exists():
+            self.file_path.unlink()
+
     def get_current_stats(self):
         import m5
         stats = {}

@@ -1,4 +1,4 @@
-gem5_path: ./custom_gem5
+gem5_path: ./gem5_master
 gem5_features:
   syscall_trace: true
 
@@ -7,5 +7,5 @@ libc_path: ./libc/glibc/build/install
 gem5_flag_config_plugin: ./test/test_configurations.py
 
 spec2017_config:
-  spec2017_src_path: ./spec-cpu2017
+  spec2017_src_path: ../cooldown/spec-cpu2017
   workspace_path: ./workspace_lapidary_spec17

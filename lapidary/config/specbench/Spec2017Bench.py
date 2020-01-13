@@ -192,14 +192,6 @@ class Spec2017Bench:
             '160', '59,796,407', '61,004,416', '6']
       }
 
-    # def __init__(self, bin_dir, input_dir, lib_dir=Path('./lib')):
-    #     assert isinstance(bin_dir, Path)
-    #     assert isinstance(input_dir, Path)
-    #     assert isinstance(lib_dir, Path)
-    #     self.bin_dir   = bin_dir
-    #     self.input_dir = input_dir / 'spec2017'
-    #     self.lib_dir   = lib_dir / 'spec2017'
-
     def _create_input_dir(self):
         spec_inner = self.spec_src_path / 'benchspec' / 'CPU'
         assert spec_inner.exists()
@@ -249,14 +241,14 @@ class Spec2017Bench:
         self.makefile.symlink_to(class_makefile)
 
     def _make_binaries(self):
-        if self.bin_dir.exists():
+        if self.bin_dir.exists() and len(list(self.bin_dir.iterdir())) > 2:
             return
 
         import subprocess
         import shlex
 
-        cmd = shlex.split(
-            'make -C {} -j{}'.format(self.workspace_path, os.cpu_count()))
+        cmd = shlex.split('make SPEC17_ROOT={} -C {} -j{}'.format(
+            self.spec_src_path, self.workspace_path, os.cpu_count()))
         subprocess.check_call(cmd)
 
 
