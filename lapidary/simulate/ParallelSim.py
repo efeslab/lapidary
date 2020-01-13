@@ -7,6 +7,7 @@ from lapidary.config import Gem5FlagConfig
 import json
 import os
 import progressbar
+import sys, io
 
 from argparse import ArgumentParser
 from collections import defaultdict
@@ -147,6 +148,7 @@ class ParallelSim:
 
     @staticmethod
     def _run_process(experiment_args, log_file):
+        '''
         experiment = Popen(experiment_args, stdin=DEVNULL, stdout=PIPE, stderr=PIPE)
         stdout, stderr = experiment.communicate()
 
@@ -161,6 +163,38 @@ class ParallelSim:
                 f.write(stderr.decode('ascii'))
             finally:
                 lockf(f, LOCK_UN)
+        '''
+        '''
+            Essentially, we want to just run the experiment stuff again.
+            So, we pretend like we're running this from scratch.
+
+            This is already a separate process.
+        '''
+
+        out = io.StringIO()
+        err = io.StringIO()
+
+        parser = ArgumentParser()
+        LapidaryConfig.add_config_arguments(parser)
+        Experiment.add_experiment_args(parser)
+        args = parser.parse_args(args=experiment_args[1:])   
+
+        sys.stdout = out
+        sys.stderr = err
+        Experiment.do_experiment(args)
+
+        with open(log_file, 'a') as f:
+            try:
+                lockf(f, LOCK_EX)
+                f.write('-'*80 + os.linesep)
+                f.write(' '.join(experiment_args) + os.linesep)
+                f.write('STDOUT ' + '-'*40 + os.linesep)
+                f.write(out.getvalue())
+                f.write('STDERR ' + '-'*40 + os.linesep)
+                f.write(err.getvalue())
+            finally:
+                lockf(f, LOCK_UN)
+
 
     def start(self):
         with open(self.log_file, 'w' if not self.append else 'a') as f:
@@ -215,7 +249,6 @@ class ParallelSim:
 
                 finished_tasks = []
                 done_waiting = False
-                #print('\nStart loop')
                 while not done_waiting:
                     done_waiting = True
                     successful   = False
