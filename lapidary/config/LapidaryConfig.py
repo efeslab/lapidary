@@ -91,6 +91,12 @@ class LapidaryConfig(dict):
         parser.add_argument('--config-help', action=LapidaryConfigHelp,
             help='Show help for construction the configuration file.')
 
+    @classmethod
+    def add_optparse_args(cls, parser):
+        parser.add_option('--config-file', default='.lapidary.yaml',
+                            help=('Load simulation configurations from the '
+                                  'specified YAML file.'))
+
     @staticmethod
     def add_config_help_arguments(parser):
         parser.add_argument('--config-help', action=LapidaryConfigHelp,

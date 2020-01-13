@@ -71,7 +71,7 @@ def RunExperiment( options, root, system, FutureClass ):
     exit_cause = None
     system.exit_on_work_items = True
 
-    config = LapidaryConfig.get_config(options)
+    config = LapidaryConfig(options.config_file)
     Gem5FlagConfig.parse_plugins(config)
 
     before_init_config, after_warmup_config = Gem5FlagConfig.get_config(

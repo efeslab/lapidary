@@ -69,6 +69,7 @@ class Gem5FlagConfig:
 
     @classmethod
     def get_config(cls, config_name):
+        assert isinstance(config_name, str)
         config_name = config_name.lower()
         print('Config: {}'.format(config_name))
 

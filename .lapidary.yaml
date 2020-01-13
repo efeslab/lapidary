@@ -1,4 +1,4 @@
-gem5_path: ./custom_gem5
+gem5_path: ./gem5_master
 gem5_features:
   syscall_trace: true
 
