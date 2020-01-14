@@ -17,12 +17,12 @@ To install Lapidary:
 
 ```shell
 # Clone repository
-$ git clone https://github.com/efeslab/lapidary.git
+$ git clone https://github.com/efeslab/lapidary.git ./lapidary_repo
 # Setup virtual environment
 $ python3 -m venv virt_env
 $ source virt_env/bin/activate
 # install
-$ pip3 install ./lapidary
+$ pip3 install ./lapidary_repo
 ```
 
 **Note**: due to some [limitations](#current-limitations), it might be necessary to run 
@@ -94,6 +94,8 @@ an automated fashion (every N seconds or every M instructions) or interactively 
 
 ```shell
 $ python3 -m lapidary create --help
+# If ./.lapidary.yaml doesn't exist
+$ python3 -m lapidary -c ./lapidary_repo/.lapidary.yaml create --help
 ```
 
 2. Create checkpoints for an arbitrary binary every second:

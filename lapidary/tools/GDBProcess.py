@@ -137,7 +137,7 @@ def gdb_main():
 #########################################################################
 
 def add_args(parser):
-    LapidaryConfig.add_config_arguments(parser)
+    # LapidaryConfig.add_config_arguments(parser)
     SpecBench.add_parser_args(parser)
     add_arguments(parser)
 
@@ -189,7 +189,7 @@ def main(args):
     arg_list = []
     gdbprocs = []
     if args.cmd:
-        args.cmd[0] = modify_binary_ldd(config, args.cmd[0])
+        args.cmd[0] = modify_binary_ldd(args.config, args.cmd[0])
 
         arg_list = args.cmd
         directory = args.directory if args.directory is not None else '.'

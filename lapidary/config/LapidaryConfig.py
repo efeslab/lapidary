@@ -9,9 +9,14 @@ from lapidary.utils import gettype
 from lapidary.config.Gem5FlagConfig import Gem5FlagConfig
 
 SCHEMA_FILE = Path(__file__).parent / 'schema.yaml'
-SCHEMA = ''
-with SCHEMA_FILE.open('r') as f:
-    SCHEMA = yaml.safe_load(f)
+SCHEMA = None
+
+def get_schema():
+    global SCHEMA
+    if SCHEMA is None:
+        with SCHEMA_FILE.open('r') as f:
+            SCHEMA = yaml.safe_load(f)
+    return SCHEMA
 
 class ConfigException(Exception):
     pass
@@ -22,18 +27,8 @@ class LapidaryConfigHelp(Action):
         super().__init__(option_strings, dest, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
-        print(yaml.dump(SCHEMA))
+        print(yaml.dump(get_schema()))
         exit(0)
-
-class LapidaryConfigHandler(Action):
-    def __init__(self, option_strings, dest, **kwargs):
-        super().__init__(option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        filename = getattr(namespace, self.dest)
-        config = self.type(filename=filename)
-        setattr(namespace, self.dest, config)
-        Gem5FlagConfig.parse_plugins(config)
 
 class LapidaryConfig(dict):
 
@@ -55,13 +50,12 @@ class LapidaryConfig(dict):
                     raw_path = Path(self.filename).parent / element
                     element = raw_path.resolve()
             if isinstance(element, dict):
-                options = SCHEMA[field]['valid_options']
+                options = get_schema()[field]['valid_options']
                 element = self._parse_yaml_data(options, element)
 
             elements[field] = element
 
-        return elements
-        
+        return elements    
 
     def __init__(self, filename=None, rawdata=None):
         assert filename is not None or rawdata is not None
@@ -76,16 +70,19 @@ class LapidaryConfig(dict):
         if not raw_config:
             raise ConfigException('Empty configuration was provided!')
 
-        parsed_config = self._parse_yaml_data(SCHEMA, raw_config)
+        parsed_config = self._parse_yaml_data(get_schema(), raw_config)
         try:
             super().__init__(**parsed_config)
         except:
             super(type(self), self).__init__(**parsed_config)
+        
+        Gem5FlagConfig.parse_plugins(self)
+
 
     @classmethod
     def add_config_arguments(cls, parser):
         parser.add_argument('--config', '-c', default='.lapidary.yaml',
-                            action=LapidaryConfigHandler, type=cls,
+                            type=cls,
                             help=('Load simulation configurations from the '
                                   'specified YAML file.'))
         parser.add_argument('--config-help', action=LapidaryConfigHelp,
