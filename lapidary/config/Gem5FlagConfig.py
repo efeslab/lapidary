@@ -17,6 +17,7 @@ class Gem5FlagConfig:
 
     @classmethod
     def parse_plugins(cls, config):
+        assert isinstance(config, dict)
         if 'gem5_flag_config_plugin' not in config:
             return
 

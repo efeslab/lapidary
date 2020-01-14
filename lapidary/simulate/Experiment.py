@@ -308,12 +308,15 @@ def add_experiment_args(parser):
     Gem5FlagConfig.add_parser_args(parser)
     SpecBench.add_parser_args(parser)
 
-def do_experiment(args):
+def do_experiment(args, config=None):
     
     global gem5_dir
     global gem5_opt
     global gem5_debug
     global pythonpath
+
+    if config is not None:
+        args.config = config
 
     gem5_dir    = args.config['gem5_path']
     gem5_opt    = gem5_dir / 'build' / 'X86' / 'gem5.opt'

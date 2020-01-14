@@ -29,6 +29,8 @@ class ParallelSim:
         if not output_dir_parent.exists():
             output_dir_parent.mkdir()
 
+        self.args = args
+
         mode = 'o3'
         if args.in_order:
             mode = 'inorder'
@@ -99,7 +101,6 @@ class ParallelSim:
             output_dir = output_dir_parent / '{}_{}_{}'.format(
                 args.bench, mode, str(chkpt.name))
             arg_list = [
-                './Experiment.py',
                 '--bench', args.bench,
                 '--suite', args.suite,
                 '--warmup-insts', str(args.warmup_insts),
@@ -148,7 +149,7 @@ class ParallelSim:
                 json.dump(self.summary, f, indent=4)
 
     @staticmethod
-    def _run_process(experiment_args, log_file):
+    def _run_process(experiment_args, log_file, config):
         '''
             Essentially, we want to just run the experiment stuff again.
             So, we pretend like we're running this from scratch.
@@ -156,9 +157,8 @@ class ParallelSim:
             This is already a separate process.
         '''
         parser = ArgumentParser()
-        LapidaryConfig.add_config_arguments(parser)
         Experiment.add_experiment_args(parser)
-        args = parser.parse_args(args=experiment_args[1:])   
+        args = parser.parse_args(args=experiment_args)   
 
         prefix = 'lapidary_parallel_simulate'
         with TemporaryFile(mode='w+', prefix=prefix) as out, \
@@ -167,7 +167,7 @@ class ParallelSim:
 
             sys.stdout = out
             sys.stderr = err
-            Experiment.do_experiment(args)
+            Experiment.do_experiment(args, config=config)
             out.seek(0)
             err.seek(0)
 
@@ -227,7 +227,7 @@ class ParallelSim:
                 remaining_checkpoints = len(self.all_proc_args)
 
                 for chkpt, experiment_args in proc_args.items():
-                    fn_args = (experiment_args, self.log_file)
+                    fn_args = (experiment_args, self.log_file, self.args.config)
                     task = pool.apply_async(ParallelSim._run_process, fn_args)
 
                     tasks[task] = time()
@@ -320,8 +320,11 @@ class ParallelSim:
                             help='Locations of all the checkpoints')
         parser.add_argument('--pool-size', '-p', default=cpu_count(),
                             help='Number of threads to use')
-        parser.add_argument('--log-file', '-l', default='log.txt',
-                            help='Where to log stdout/stderr from experiment runs.')
+        parser.add_argument('--log-file', '-l', 
+            default='parallel_simulation_log_{}.txt'.format(
+                datetime.now().isoformat(sep='_', timespec='seconds')),
+                            help=('Where to log stdout/stderr from experiment runs. '
+                            'Defaults to parallel_simulation_log_<time>.txt'))
         parser.add_argument('--num-checkpoints', '-n', default=None, type=int,
             help='Number of checkpoints to simulate. If None, then all.')
         parser.add_argument('--all-configs', action='store_true',

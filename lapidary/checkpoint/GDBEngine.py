@@ -238,8 +238,7 @@ class GDBEngine:
             import IPython
             IPython.embed()
 
-    @classmethod
-    def _interrupt_in(cls, sec):
+    def _interrupt_in(self, sec):
         '''
             Used to pause GDB with running in timed mode so that checkpoints 
             can be made. A little hackish, but it works.
@@ -250,7 +249,10 @@ class GDBEngine:
         import gdb
         def control_c(pid, seconds):
             sleep(seconds)
-            os.kill(pid, cls.SIGNAL)
+            try:
+                os.kill(pid, self.SIGNAL)
+            except OSError:
+                self.logger.warning('Could not interrupt inferior process %d as it no longer exists' % pid)
 
         ipid = gdb.selected_inferior().pid
         proc = Process(target=control_c, args=(ipid, sec))
