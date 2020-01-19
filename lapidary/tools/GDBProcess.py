@@ -66,6 +66,10 @@ class GDBProcess:
         env['CHECKPOINT_COMPRESS']   = str(compress)
         env['CHECKPOINT_CONVERT']    = str(convert)
         env['CHECKPOINT_KEYFRAMES']  = str(keyframes)
+        # By setting the python path, we preserve the import paths of the 
+        # virtual environment, as sys.path is populated in part from the 
+        # $PYTHONPATH environment variable.
+        env['PYTHONPATH']            = ':'.join(sys.path)
 
         if ld_path is not None:
             assert ld_path.exists()
@@ -74,7 +78,7 @@ class GDBProcess:
         self.env = env
 
     def run(self):
-        subprocess.run(self.args)
+        subprocess.run(self.args, env=self.env)
 
 
 def add_arguments(parser):
