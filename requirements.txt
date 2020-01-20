@@ -1,5 +1,5 @@
-wheel
 diff-match-patch
+elftools
 ipython
 jinja2
 matplotlib
@@ -9,3 +9,4 @@ pathlib
 progressbar2
 pyelftools
 pyyaml
+wheel

@@ -1,7 +1,17 @@
 #! /usr/bin/env python3
 import setuptools
+import shlex
+import subprocess
+
+def install_python2_requirements():
+    cmd  = 'python2.7 -m pip install --user -r requirements2.txt'
+    args = shlex.split(cmd)
+    subprocess.call(args)
+
 
 def main():
+    install_python2_requirements()
+
     with open('README.md', 'r') as f:
         long_description = f.read()
 
@@ -10,7 +20,7 @@ def main():
 
     setuptools.setup(
         name='lapidary',
-        version='0.7.0',
+        version='0.7.1',
         author='Ian Glen Neal',
         author_email='iangneal@umich.com',
         description='A tool for scalable Gem5 Simulation',
@@ -18,7 +28,11 @@ def main():
         long_description_content_type='text/markdown',
         url='https://github.com/efeslab/lapidary',
         packages=setuptools.find_packages(),
-        package_data={'lapidary': ['config/schema.yaml']},
+        package_data={'lapidary': [
+            'config/schema.yaml',
+            'checkpoint/get_brk.c',
+            'checkpoint/get_fs_base.c'
+        ]},
         setup_requires=['wheel'],
         install_requires=install_requires,
         classifiers=[
