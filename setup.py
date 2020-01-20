@@ -1,7 +1,17 @@
 #! /usr/bin/env python3
 import setuptools
+import shlex
+import subprocess
+
+def install_python2_requirements():
+    cmd  = 'python2.7 -m pip install --user -r requirements2.txt'
+    args = shlex.split(cmd)
+    subprocess.call(args)
+
 
 def main():
+    install_python2_requirements()
+
     with open('README.md', 'r') as f:
         long_description = f.read()
 
