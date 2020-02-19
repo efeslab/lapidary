@@ -277,6 +277,8 @@ specify which extensions to disable via the `-cpu` flag in QEMU, e.g.
 ... -cpu host,-avx2,-bmi1,-bmi2 ...
 ```
 
+We have provided some example scripts in the [scripts][scripts] directory.
+
 2. Not all checkpoints run successfully. For example, checkpoints that attempt
 to invoke syscalls generally end up crashing.
 
@@ -317,3 +319,4 @@ any and all feedback and would like to make this tool as useful as possible.
 [gem5]: http://gem5.org/Main_Page
 [blog]: https://medium.com/@iangneal/lapidary-crafting-more-beautiful-gem5-simulations-4bc6f6aad717
 [smarts]: https://dl.acm.org/citation.cfm?id=859629
+[scripts]: scripts/
