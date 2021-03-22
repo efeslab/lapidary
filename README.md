@@ -1,5 +1,10 @@
 # Lapidary: creating beautiful gem5 simulations.
 
+If you use Lapidary in your research, please cite:
+
+*Ofir Weisse, Ian Neal, Kevin Loughlin, Thomas F. Wenisch, and Baris Kasikci. 2019. **NDA: Preventing Speculative Execution Attacks at Their Source.** In Proceedings of the 52nd Annual IEEE/ACM International Symposium on Microarchitecture (MICRO '52). Association for Computing Machinery, New York, NY, USA, 572–586. DOI: https://doi.org/10.1145/3352460.3358306*
+
+
 Lapidary is a tool we have built to enable more efficient [gem5][gem5] simulations. 
 
 Lapidary works by creating gem5 checkpoints on bare-metal to avoid the
